@@ -1,20 +1,8 @@
-function incidentOutcomes(ui, showDocument = false) {
-  const document = showDocument
-    ? `<span data-motion="allowed-document">${ui.asset('A005', 'late-outcome-art', '')}</span>`
-    : '';
-  return `<div class="late-outcomes" data-motion="outcomes">
-    <div class="late-outcome">
-      <div class="late-allowed-track" aria-hidden="true">
-        <div class="late-line late-line-open" data-motion="allowed-line"></div>
-        ${document}
-      </div>
-      ${ui.block(4)}
-    </div>
-    <div class="late-outcome late-evidence-boundary">
-      <div class="late-line late-line-stop" aria-hidden="true" data-motion="evidence-line"></div>
-      ${ui.block(5)}
-    </div>
-    <div class="late-outcome late-authority-boundary">${ui.block(6)}</div>
+function incidentOutcomes(ui) {
+  return `<div class="late-outcomes">
+    <section class="late-outcome late-outcome-continue" data-motion="outcome-continue">${ui.block(4)}</section>
+    <section class="late-outcome late-outcome-wait" data-motion="outcome-wait">${ui.block(5)}</section>
+    <section class="late-outcome late-outcome-authority" data-motion="outcome-authority">${ui.block(6)}</section>
   </div>`;
 }
 
@@ -45,12 +33,12 @@ function incidentScene(state, ui) {
         <section class="late-evidence">
           ${ui.part('incidentEvidenceHeading')}
           <div class="late-evidence-grid">
-            <div>
-              <div data-motion="first-policy">${ui.asset('A005', 'late-policy-art', '')}</div>
+            <div data-motion="first-policy">
+              ${ui.asset('A005', 'late-policy-art', '')}
               ${ui.part('incidentEvidencePolicyA')}
             </div>
-            <div>
-              <div data-motion="second-policy">${ui.asset('A005', 'late-policy-art', '')}</div>
+            <div data-motion="second-policy">
+              ${ui.asset('A005', 'late-policy-art', '')}
               ${ui.part('incidentEvidencePolicyB')}
             </div>
             <div data-motion="billing-evidence">
@@ -64,8 +52,8 @@ function incidentScene(state, ui) {
     case 'R3':
       return `<div class="late-stack">
         <div>${ui.part('incidentIdentity')}</div>
-        ${incidentOutcomes(ui, true)}
-        <div data-motion="answer">${ui.block(11)}</div>
+        ${incidentOutcomes(ui)}
+        <section class="late-incident-answer" data-motion="answer">${ui.block(11)}</section>
       </div>`;
     case 'R4':
       return `<div class="late-stack">
@@ -87,7 +75,7 @@ function incidentScene(state, ui) {
         <div>${ui.part('incidentIdentity')}</div>
         <div class="late-draft-layout">
           <section class="late-draft" data-motion="draft">${ui.block(15)}</section>
-          <div class="late-final-context">
+          <div class="late-final-context" data-motion="draft-context">
             ${incidentReviewers(ui)}
             ${incidentOutcomes(ui)}
           </div>
@@ -104,7 +92,7 @@ function calendarIllustration() {
 function pilotScorecard(ui, showDefinitions) {
   const rows = [1, 2, 3].map((index) => {
     const definition = showDefinitions
-      ? `<td role="cell" class="late-definition">
+      ? `<td role="cell" class="late-definition" data-motion="definition-${index}">
           <span class="late-cell-label" aria-hidden="true">${ui.part('measureDefinitionsLabel')}</span>
           ${ui.part(`measureDefinition${index}`)}
         </td>`
@@ -115,9 +103,9 @@ function pilotScorecard(ui, showDefinitions) {
   const extendedHeaders = showDefinitions
     ? headers.replace('</tr>', `<th scope="col" role="columnheader">${ui.part('measureDefinitionsLabel')}</th></tr>`)
     : headers;
-  return `<section class="late-scorecard">
+  return `<section class="late-scorecard" data-motion="scorecard">
     ${ui.part('pilotTableHeading')}
-    <table class="late-table" role="table">
+    <table class="late-table${showDefinitions ? ' late-table-definitions' : ''}" role="table">
       <thead role="rowgroup">${extendedHeaders}</thead>
       <tbody role="rowgroup">${rows}</tbody>
     </table>
@@ -125,23 +113,16 @@ function pilotScorecard(ui, showDefinitions) {
   </section>`;
 }
 
-function pilotResponsibility(ui, includeArt) {
-  const human = includeArt ? ui.asset('A004', 'late-reviewer-art', '') : '';
-  const sideCharter = includeArt ? ui.asset('A005', 'late-policy-art', '') : '';
-  const finalCharter = includeArt ? '' : `<div class="late-charter" data-motion="charter">
-    ${ui.asset('A005', 'late-mini-art', '')}
-    <div>${ui.block(9)}</div>
-  </div>`;
-  return `<div class="late-pilot-roles" data-motion="pilot-roles">
-    <div class="late-pilot-owner">
-      <div class="late-reviewers">${human}<div>${ui.block(7)}</div></div>
+function pilotResponsibility(ui, showCharter = false) {
+  const finalCharter = showCharter ? `<div class="late-charter" data-motion="charter">
+    ${ui.block(9)}
+  </div>` : '';
+  return `<div class="late-pilot-roles">
+    <section class="late-pilot-owner" data-motion="pilot-owner">
+      ${ui.block(7)}
       ${finalCharter}
-    </div>
-    <div class="late-stop-rule">
-      <div class="late-line late-line-stop" data-motion="return-line" aria-hidden="true"></div>
-      <div>${ui.block(8)}</div>
-    </div>
-    ${sideCharter}
+    </section>
+    <section class="late-stop-rule" data-motion="stop-rule">${ui.block(8)}</section>
   </div>`;
 }
 
@@ -168,11 +149,11 @@ function pilotScene(state, ui) {
         ${pilotScorecard(ui, true)}
       </div>`;
     case 'R3':
-      return pilotResponsibility(ui, true);
+      return pilotResponsibility(ui);
     case 'R4':
       return `<div class="late-stack">
         ${pilotScorecard(ui, false)}
-        ${pilotResponsibility(ui, false)}
+        ${pilotResponsibility(ui, true)}
       </div>`;
   }
 }
@@ -334,11 +315,10 @@ export const lateScenes = {
         { target: 'evidence-note', effect: 'fade', delay: 200, duration: 350 },
       ] },
       { from: 'R2', to: 'R3', duration: 550, motion: [
-        { target: 'outcomes', effect: 'fade', delay: 0, duration: 250 },
-        { target: 'allowed-line', effect: 'line', delay: 125, duration: 300 },
-        { target: 'evidence-line', effect: 'line', delay: 125, duration: 300 },
-        { target: 'allowed-document', effect: 'fade', delay: 250, duration: 300 },
-        { target: 'answer', effect: 'fade', delay: 300, duration: 250 },
+        { target: 'outcome-continue', effect: 'fade', delay: 0, duration: 220 },
+        { target: 'outcome-wait', effect: 'fade', delay: 110, duration: 220 },
+        { target: 'outcome-authority', effect: 'fade', delay: 220, duration: 220 },
+        { target: 'answer', effect: 'fade', delay: 350, duration: 200 },
       ] },
       { from: 'R3', to: 'R4', duration: 450, motion: [
         { target: 'reviewer', effect: 'rise', delay: 0, duration: 450 },
@@ -348,7 +328,8 @@ export const lateScenes = {
       ] },
       { from: 'R4', to: 'R5', duration: 220, motion: [
         { target: 'draft', effect: 'fade', delay: 0, duration: 220 },
-        { target: 'takeaway', effect: 'fade', delay: 0, duration: 220 },
+        { target: 'draft-context', effect: 'fade', delay: 40, duration: 180 },
+        { target: 'takeaway', effect: 'fade', delay: 90, duration: 130 },
       ] },
     ],
   },
@@ -365,16 +346,20 @@ export const lateScenes = {
       ] },
       { from: 'R1', to: 'R2', duration: 450, motion: [
         { target: 'measure-1', effect: 'focus', delay: 0, duration: 230 },
+        { target: 'definition-1', effect: 'fade', delay: 0, duration: 230 },
         { target: 'measure-2', effect: 'focus', delay: 110, duration: 230 },
+        { target: 'definition-2', effect: 'fade', delay: 110, duration: 230 },
         { target: 'measure-3', effect: 'focus', delay: 220, duration: 230 },
+        { target: 'definition-3', effect: 'fade', delay: 220, duration: 230 },
       ] },
       { from: 'R2', to: 'R3', duration: 450, motion: [
-        { target: 'pilot-roles', effect: 'fade', delay: 0, duration: 450 },
-        { target: 'return-line', effect: 'line', delay: 150, duration: 300 },
+        { target: 'pilot-owner', effect: 'fade', delay: 0, duration: 320 },
+        { target: 'stop-rule', effect: 'fade', delay: 120, duration: 330 },
       ] },
       { from: 'R3', to: 'R4', duration: 220, motion: [
-        { target: 'charter', effect: 'fade', delay: 0, duration: 220 },
-        { target: 'takeaway', effect: 'fade', delay: 0, duration: 220 },
+        { target: 'scorecard', effect: 'fade', delay: 0, duration: 180 },
+        { target: 'charter', effect: 'fade', delay: 60, duration: 160 },
+        { target: 'takeaway', effect: 'fade', delay: 100, duration: 120 },
       ] },
     ],
   },
@@ -392,7 +377,7 @@ export const lateScenes = {
         })),
         { target: 'connected-heading', effect: 'fade', delay: 950, duration: 250 },
       ] },
-      { from: 'R1', to: 'R2', duration: 650, motion: [
+      { from: 'R1', to: 'R2', duration: 650, anchor: 'email-draft', motion: [
         { target: 'email-draft', effect: 'rise', delay: 0, duration: 500 },
         { target: 'email-revision', effect: 'rise', delay: 0, duration: 500 },
         { target: 'recommendation', effect: 'fade', delay: 300, duration: 350 },
@@ -403,12 +388,12 @@ export const lateScenes = {
         { target: 'intended-site', effect: 'fade', delay: 450, duration: 350 },
         { target: 'site-link', effect: 'line', delay: 450, duration: 350 },
       ] },
-      { from: 'R3', to: 'R4A', duration: 400, motion: [
+      { from: 'R3', to: 'R4A', duration: 400, anchor: 'trace-detail', motion: [
         { target: 'trace-outline', effect: 'fade', delay: 0, duration: 400 },
         { target: 'trace-detail', effect: 'fade', delay: 125, duration: 275 },
       ] },
       ...[['R4A', 'R4B'], ['R4B', 'R4C'], ['R4C', 'R4D']].map(([from, to]) => ({
-        from, to, duration: 400, motion: [
+        from, to, duration: 400, anchor: 'trace-detail', motion: [
           { target: 'trace-outline', effect: 'fade', delay: 0, duration: 400 },
           { target: 'trace-detail', effect: 'fade', delay: 125, duration: 275 },
         ],
@@ -456,29 +441,40 @@ export const lateStyles = `
   gap: 24px;
 }
 .late-evidence-grid > div { display: grid; justify-items: center; text-align: center; gap: 6px; align-content: start; }
+.late-evidence-grid .late-policy-art { height: clamp(80px, 9vw, 112px); }
 .late-outcomes {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(16px, 4vw, 64px);
-  align-items: start;
+  grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
+  gap: clamp(12px, 1.8vw, 24px);
 }
-.late-outcome { padding: 12px 14px; }
-.late-evidence-boundary { border-inline-end: 4px solid var(--ink); }
-.late-evidence-boundary .late-line { width: calc(100% + 14px); }
-.late-authority-boundary { border: 4px solid var(--ink); border-radius: 8px; }
-.late-allowed-track { display: flex; align-items: center; gap: 8px; min-height: 3px; margin-bottom: 12px; }
-.late-allowed-track .late-line { margin-bottom: 0; }
-.late-outcome-art { width: 30px; }
-.late-line { width: min(100%, 128px); height: 3px; background: var(--focus); margin-bottom: 12px; position: relative; }
-.late-line::after { content: ""; position: absolute; inset-inline-end: 0; top: 50%; }
-.late-line-open::after { width: 10px; height: 10px; background: var(--focus); border-radius: 100%; transform: translateY(-50%); }
-.late-line-stop::after { width: 3px; height: 16px; background: var(--focus); transform: translateY(-50%); }
-.late-reviewers, .late-charter, .late-run-handoff, .late-intended-site {
+.late-outcome {
+  min-width: 0;
+  padding: clamp(12px, 1.4vw, 18px);
+  line-height: 1.34;
+  border: 1px solid var(--divider);
+  border-block-start: 4px solid var(--outcome-accent);
+  border-radius: 8px;
+  background: var(--outcome-surface);
+}
+.late-outcome-continue { --outcome-accent: #357768; --outcome-surface: #edf7f4; }
+.late-outcome-wait { --outcome-accent: #956826; --outcome-surface: #fff8e0; }
+.late-outcome-authority { --outcome-accent: #404b59; --outcome-surface: var(--quiet); }
+.late-outcome h3 { font-size: 1em; line-height: 1.22; margin-block-end: .55em; }
+.late-outcome p + p { margin-block-start: .45em; }
+.late-incident-answer {
+  border-block-start: 1px solid var(--divider);
+  padding-block-start: 14px;
+  line-height: 1.34;
+}
+@media (min-width: 1024px) {
+  .late-outcomes .late-outcome h3 { min-block-size: 2.44em; }
+}
+.late-reviewers, .late-run-handoff, .late-intended-site {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.late-reviewers .sticker, .late-charter .sticker, .late-run-handoff .sticker { flex: none; }
+.late-reviewers .sticker, .late-run-handoff .sticker { flex: none; }
 .late-changes { display: grid; gap: 4px; }
 .late-changes > div { border-inline-start: 3px solid var(--focus); padding: 8px 12px; }
 .late-draft-layout {
@@ -488,16 +484,13 @@ export const lateStyles = `
   gap: clamp(16px, 3vw, 36px);
 }
 .late-final-context { display: grid; gap: 12px; min-width: 0; }
-.late-final-context .late-outcomes { grid-template-columns: minmax(0, 1fr); gap: 0; }
-.late-final-context .late-outcome { padding: 10px 12px; border-top: 1px solid var(--divider); }
-.late-final-context .late-evidence-boundary { border-inline-end: 0; }
-.late-final-context .late-authority-boundary {
-  border: 1px solid var(--divider);
-  border-inline-start: 3px solid var(--ink);
-  border-radius: 0;
+.late-final-context .late-outcomes { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.late-final-context .late-outcome {
+  padding: 10px 12px;
+  border-block-start: 1px solid var(--divider);
+  border-inline-start: 4px solid var(--outcome-accent);
 }
-.late-final-context :is(.late-allowed-track, .late-line) { display: none; }
-.late-final-context .late-outcome h3 { font-size: 1em; }
+.late-final-context .late-outcome h3 { min-block-size: 0; }
 .late-incident-final .late-reviewer-art { width: 60px; }
 .late-scope {
   display: grid;
@@ -519,21 +512,48 @@ export const lateStyles = `
 .late-pilot-measurement { position: relative; }
 .late-calendar-exit { position: absolute; z-index: 2; top: 50%; width: min(26%, 320px); pointer-events: none; }
 .late-scorecard { font-size: max(22px, 0.93em); min-width: 0; }
-.late-scorecard > p:last-child { margin-top: 8px; font-weight: 650; }
-.late-table { margin-top: 8px; }
+.late-scorecard > p:last-child { margin-top: 10px; font-weight: 650; color: var(--muted); }
+.late-table {
+  margin-top: 10px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.late-table th, .late-table td { padding: .38em .65em; }
+.late-table thead th { background: var(--blue); }
+.late-table thead th:first-child { width: 46%; }
+.late-table-definitions thead th:first-child { width: 36%; }
+.late-table-definitions thead th:nth-child(2),
+.late-table-definitions thead th:nth-child(3) { width: 17%; }
+.late-table tbody tr:nth-child(even) { background: var(--quiet); }
+.late-table tbody tr:last-child > :is(th, td) { border-block-end: 0; }
+.late-table tbody td { font-variant-numeric: tabular-nums; }
 .late-table .late-definition { border-inline-start: 1px solid var(--divider); }
 .late-cell-label { display: none; }
 .late-pilot-roles {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr) auto;
-  gap: 18px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr);
+  gap: clamp(12px, 1.8vw, 24px);
 }
-.late-stop-rule { border-inline-start: 3px solid var(--focus); padding-inline-start: 12px; }
-.late-pilot-roles:has(> :last-child:nth-child(2)) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr); }
-.late-pilot-owner { display: grid; gap: 10px; }
-.late-charter { background: var(--quiet); padding-inline: 10px; }
-.late-charter .sticker { width: 46px; }
+.late-pilot-owner, .late-stop-rule {
+  min-width: 0;
+  padding: clamp(12px, 1.6vw, 20px);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--quiet);
+}
+.late-stop-rule { border-inline-start: 4px solid var(--focus); }
+.late-stop-rule p + p { color: var(--muted); }
+.late-charter {
+  margin-block-start: 12px;
+  padding-block-start: 12px;
+  border-block-start: 1px solid var(--divider);
+}
+.late-charter h3 { font-size: .9em; color: var(--muted); }
+.late-charter p { font-weight: 650; }
 .late-evidence-scene { font-size: max(22px, 0.93em); }
 .late-finding {
   position: relative;
@@ -730,14 +750,14 @@ export const lateStyles = `
 @media (max-width: 1023px) {
   .late-scorecard, .late-evidence-scene { font-size: inherit; }
   .late-case-layout, .late-draft-layout, .late-scope, .late-outcomes, .late-evidence-grid,
-  .late-pilot-roles, .late-pilot-roles:has(> :last-child:nth-child(2)), .late-handoff,
+  .late-pilot-roles, .late-handoff,
   .late-trace-evidence, .late-live-cue, .late-email-pair, .late-evidence-scene .late-trace-track,
   .late-evidence-scene > .late-stack > ol:not(.late-trace-track) { grid-template-columns: minmax(0, 1fr); }
   .late-case-layout { gap: 14px; }
   .late-request-art { width: 116px; }
   .late-reviewer-art { width: 60px; }
   .late-evidence-grid > div { grid-template-columns: 66px minmax(0, 1fr); align-items: center; justify-items: start; text-align: start; }
-  .late-evidence-grid .sticker { width: 66px; }
+  .late-evidence-grid .late-policy-art { width: 66px; height: 68px; }
   .late-scope .late-calendar { max-width: 320px; grid-row: 2; }
   .late-evidence-scene .late-familiar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .late-familiar > .late-familiar-grid .late-recall-art { height: 68px; }
@@ -759,7 +779,10 @@ export const lateStyles = `
   .late-familiar > .late-familiar-grid .late-recalled-art { height: 78px; }
   .late-familiar > .late-familiar-grid .late-recall-art { height: 58px; }
   .late-artifact-copy { padding-top: 0; }
-  .late-table { display: block; }
+}
+
+@media (max-width: 680px) {
+  .late-table { display: block; border: 0; border-radius: 0; overflow: visible; }
   .late-table thead {
     position: absolute;
     width: 1px;
@@ -772,8 +795,9 @@ export const lateStyles = `
   .late-table tbody tr {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 8px 10px;
+    padding: 10px 12px;
     border: 1px solid var(--divider);
+    border-radius: 8px;
   }
   .late-table tbody :is(th, td) { display: block; padding: 3px; border: 0; }
   .late-table tbody :is(th, .late-definition) { grid-column: 1 / -1; }

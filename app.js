@@ -1,8 +1,11 @@
 import { lessonPages } from './lesson-data.js?v=2';
-import { earlyScenes, earlyStyles } from './scenes-early.js?v=3';
-import { lateScenes, lateStyles } from './scenes-late.js?v=3';
+import { earlyScenes, earlyStyles } from './scenes-early.js?v=4';
+import { lateScenes, lateStyles } from './scenes-late.js?v=4';
 
 const scenes = { ...earlyScenes, ...lateScenes };
+const PRESENTATION_SCALE = 2.5;
+const MIN_REVEAL_MS = 1400;
+const READING_PAUSE_MS = 700;
 const pageStates = lessonPages.map(({ id }) => ['R0', ...scenes[id].beats.map(beat => beat.to)]);
 const stickers = {
   A001: ['A001_planning_board.png', 881, 647, 50],
@@ -26,6 +29,7 @@ const stage = element('scene-stage');
 const takeaway = element('takeaway');
 const previous = element('previous');
 const next = element('next');
+const nextLabel = element('next-label');
 const options = element('options');
 const optionsToggle = options.querySelector('summary');
 const indicator = element('page-indicator');
@@ -40,6 +44,7 @@ const presentation = {
   pageIndex: 0,
   stepIndex: 0,
   active: null,
+  readingTimer: null,
   panelOpener: null,
   motionOverride: null,
 };
@@ -89,7 +94,8 @@ function renderTransport() {
   const active = presentation.active;
   previous.disabled = !active && presentation.pageIndex === 0 && presentation.stepIndex === 0;
   next.disabled = presentation.pageIndex === lessonPages.length - 1 && presentation.stepIndex === lastStep();
-  next.setAttribute('aria-disabled', String(Boolean(active) || next.disabled));
+  next.setAttribute('aria-disabled', String(Boolean(active) || presentation.readingTimer !== null || next.disabled));
+  nextLabel.textContent = active ? 'Revealing…' : 'Next';
   indicator.textContent = `Page ${presentation.pageIndex + 1} of ${lessonPages.length} · ` +
     `Step ${presentation.stepIndex + 1} of ${lastStep() + 1}`;
 }
@@ -117,15 +123,30 @@ function stopBeat() {
   active?.animations.forEach(animation => animation.cancel());
 }
 
-function commit(stepIndex, pageIndex = presentation.pageIndex) {
+function commit(stepIndex, pageIndex = presentation.pageIndex, pauseForReading = false) {
   const focused = document.activeElement;
   stopBeat();
+  clearTimeout(presentation.readingTimer);
+  presentation.readingTimer = pauseForReading ? setTimeout(() => {
+    presentation.readingTimer = null;
+    renderTransport();
+  }, READING_PAUSE_MS) : null;
   presentation.pageIndex = pageIndex;
   presentation.stepIndex = stepIndex;
   renderCommitted();
   announcement.textContent = indicator.textContent;
   if (focused === previous && previous.disabled) next.focus({ preventScroll: true });
   if (focused === next && next.disabled) previous.focus({ preventScroll: true });
+}
+
+function syncPlayback() {
+  const active = presentation.active;
+  if (!active) return;
+  const paused = panel.open || document.hidden;
+  for (const animation of active.animations) {
+    if (paused && animation.playState === 'running') animation.pause();
+    else if (!paused && animation.playState === 'paused') animation.play();
+  }
 }
 
 function motionFrames(effect) {
@@ -147,32 +168,56 @@ function motionFrames(effect) {
   }
 }
 
+function bringRevealIntoView(beat) {
+  const cue = beat.anchor ?? beat.motion.find(({ effect }) =>
+    effect === 'fade' || effect === 'rise' || effect === 'slide-right')?.target;
+  if (!cue) return;
+  const target = cue === 'takeaway' ? takeaway : stage.querySelector(`[data-motion~="${cue}"]`);
+  if (!target) return;
+
+  const bounds = target.getBoundingClientRect();
+  const viewport = content.getBoundingClientRect();
+  const visibleHeight = Math.min(bounds.height, 144, viewport.height / 2);
+  if (bounds.top < viewport.top) {
+    content.scrollTop += bounds.top - viewport.top - 16;
+  } else if (bounds.top + visibleHeight > viewport.bottom) {
+    content.scrollTop += bounds.top + visibleHeight - viewport.bottom + 16;
+  }
+}
+
 function startBeat(beat) {
   const destinationStep = presentation.stepIndex + 1;
   if (reducedMotion()) {
-    commit(destinationStep);
+    commit(destinationStep, presentation.pageIndex, true);
+    bringRevealIntoView(beat);
     return;
   }
 
   renderScene(beat.to, beat);
   renderTakeaway(beat.to, true);
+  bringRevealIntoView(beat);
   const targets = Array.from(stage.querySelectorAll('[data-motion]'));
   if (!takeaway.hidden) targets.push(takeaway);
+  const timeScale = Math.max(PRESENTATION_SCALE, MIN_REVEAL_MS / beat.duration);
   const animations = beat.motion.flatMap(({ target, effect, delay = 0, duration }) =>
     targets
       .filter(node => node.dataset.motion.split(/\s+/).includes(target))
       .map(node => node.animate(motionFrames(effect), {
-        delay,
-        duration,
+        delay: delay * timeScale,
+        duration: duration * timeScale,
         fill: 'both',
         easing: ['line', 'fade', 'fade-out'].includes(effect) ? 'linear' : 'cubic-bezier(0.22, 1, 0.36, 1)',
       })));
-  const clock = stage.animate([], beat.duration);
-  const active = { destinationStep, animations: [...animations, clock] };
+  animations.push(stage.animate([], beat.duration * timeScale));
+  const startTime = document.timeline.currentTime;
+  if (startTime !== null) animations.forEach(animation => { animation.startTime = startTime; });
+  const active = { destinationStep, animations };
   presentation.active = active;
   renderTransport();
-  clock.finished.then(() => {
-    if (presentation.active === active) commit(destinationStep);
+  announcement.textContent = `Revealing step ${destinationStep + 1} of ${lastStep() + 1}.`;
+  syncPlayback();
+  Promise.all(animations.map(animation => animation.finished)).then(() => {
+    if (presentation.active === active) commit(destinationStep, presentation.pageIndex, true);
   }, () => {
     // Canceling a superseded beat also cancels its clock.
   });
@@ -184,15 +229,19 @@ function prepareNavigation() {
 }
 
 function goForward(event) {
-  if (event.detail > 1 || presentation.active || next.disabled) return;
-  prepareNavigation();
+  if (event.detail > 1 || panel.open || next.getAttribute('aria-disabled') === 'true') return;
   const beat = scene().beats[presentation.stepIndex];
-  if (beat) startBeat(beat);
-  else commit(0, presentation.pageIndex + 1);
+  if (beat) {
+    options.open = false;
+    startBeat(beat);
+  } else {
+    prepareNavigation();
+    commit(0, presentation.pageIndex + 1, true);
+  }
 }
 
 function goBack(event) {
-  if (event.detail > 1 || previous.disabled) return;
+  if (event.detail > 1 || panel.open || previous.disabled) return;
   prepareNavigation();
   if (presentation.active) {
     commit(presentation.stepIndex);
@@ -212,12 +261,11 @@ function resetDemo() {
 
 function syncMotionPreference() {
   motionControl.checked = reducedMotion();
-  if (motionControl.checked && presentation.active) commit(presentation.active.destinationStep);
+  if (motionControl.checked && presentation.active) commit(presentation.active.destinationStep, presentation.pageIndex, true);
 }
 
 function openPanel(kind, opener) {
   if (panel.open) return;
-  if (presentation.active) commit(presentation.active.destinationStep);
   const pages = {
     full: ['Show full page', page().audience],
     notes: ['Presenter notes', page().notes],
@@ -227,6 +275,7 @@ function openPanel(kind, opener) {
   panelTitle.textContent = label;
   panelContent.innerHTML = ids.map(block).join('');
   panel.showModal();
+  syncPlayback();
   panel.scrollTop = 0;
   panelTitle.focus({ preventScroll: true });
 }
@@ -238,6 +287,7 @@ motionControl.addEventListener('change', () => {
   syncMotionPreference();
 });
 systemMotion.addEventListener('change', syncMotionPreference);
+document.addEventListener('visibilitychange', syncPlayback);
 element('close-panel').addEventListener('click', () => panel.close());
 panel.addEventListener('close', () => {
   if (panel.open) return;
@@ -245,6 +295,7 @@ panel.addEventListener('close', () => {
   presentation.panelOpener = null;
   panelContent.replaceChildren();
   if (opener?.isConnected) opener.focus({ preventScroll: true });
+  syncPlayback();
 });
 
 stage.addEventListener('error', event => {

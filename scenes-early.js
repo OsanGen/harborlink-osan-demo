@@ -187,7 +187,7 @@ export const earlyScenes = {
     final: 'R3',
     render: planningBoard,
     beats: [
-      { from: 'R0', to: 'R1', duration: 1400, motion: [
+      { from: 'R0', to: 'R1', duration: 1400, anchor: 'request', motion: [
         { target: 'cover', effect: 'lift', delay: 0, duration: 650 },
         { target: 'case', effect: 'fade', delay: 350, duration: 300 },
         { target: 'request', effect: 'focus', delay: 650, duration: 250 },
@@ -247,16 +247,16 @@ export const earlyScenes = {
         { target: 'interface', effect: 'fade', delay: 0, duration: 450 },
         { target: 'connection-line', effect: 'line', delay: 0, duration: 450 },
       ] },
-      { from: 'R2', to: 'R3', duration: 600, motion: [
+      { from: 'R2', to: 'R3', duration: 600, anchor: 'system-copy', motion: [
         { target: 'interface', effect: 'fade', delay: 0, duration: 300 },
         { target: 'mcp-layer', effect: 'fade', delay: 120, duration: 480 },
         { target: 'system-copy', effect: 'fade', delay: 0, duration: 600 },
       ] },
-      { from: 'R3', to: 'R4', duration: 450, motion: [
+      { from: 'R3', to: 'R4', duration: 450, anchor: 'system-copy', motion: [
         { target: 'middleware-layer', effect: 'fade', delay: 0, duration: 450 },
         { target: 'system-copy', effect: 'fade', delay: 0, duration: 450 },
       ] },
-      { from: 'R4', to: 'R5', duration: 450, motion: [
+      { from: 'R4', to: 'R5', duration: 450, anchor: 'question-1', motion: [
         { target: 'map', effect: 'fade', delay: 0, duration: 350 },
         { target: 'question-1', effect: 'fade', delay: 0, duration: 150 },
         { target: 'question-2', effect: 'fade', delay: 100, duration: 150 },
