@@ -168,18 +168,16 @@ function familiarGroups(state, ui) {
     const label = labeled
       ? `<div class="late-artifact-copy" data-motion="artifact-label-${number}">${ui.part(`artifact${number}`)}</div>`
       : '';
-    return `<li class="late-recalled"${labeled ? ` data-artifact="A0${number}"` : ''}>
-      <div class="late-recalled-art"${labeled ? ` data-motion="recall-${number}"` : ''}>${art}</div>
+    return `<li class="late-recalled"${labeled ? ` data-artifact="A0${number}" data-motion="recall-${number}"` : ''}>
+      <div class="late-recalled-art">${art}</div>
       ${label}
     </li>`;
   }).join('')}</ol>`;
-  const board = exiting => `<div class="late-board-plate${exiting ? ' late-board-exit' : ''}"${exiting ? ' data-motion="blueprint" aria-hidden="true"' : ''}>
-    <div class="late-board-surface" aria-hidden="true">${ui.asset('A001', 'late-board-art', '')}</div>
+  if (state === 'R0') return `<div class="late-board-plate">
+    <div class="late-board-surface" aria-hidden="true">${ui.asset('A001', 'board-artwork')}</div>
     ${grid(false)}
   </div>`;
-  if (state === 'R0') return board(false);
   return `<div class="late-familiar">
-    ${ui.entering?.from === 'R0' ? board(true) : ''}
     <div class="late-connected-heading" data-motion="connected-heading">${ui.part('connectedWorkHeading')}</div>
     ${grid(true)}
   </div>`;
@@ -381,8 +379,7 @@ export const lateScenes = {
     final: 'R5',
     render: evidenceScene,
     beats: [
-      { from: 'R0', to: 'R1', duration: 1200, motion: [
-        { target: 'blueprint', effect: 'fade-out', delay: 0, duration: 450 },
+      { from: 'R0', to: 'R1', duration: 1200, exit: 450, motion: [
         ...[1, 2, 3, 4].map((number) => ({
           target: `recall-${number}`, effect: 'rise', delay: 450 + (number - 1) * 55, duration: 335,
         })),
@@ -400,7 +397,7 @@ export const lateScenes = {
         { target: 'work-output', effect: 'rise', delay: 0, duration: 450 },
         { target: 'run-handoff', effect: 'fade', delay: 200, duration: 350 },
         { target: 'intended-site', effect: 'fade', delay: 450, duration: 350 },
-        { target: 'site-link', effect: 'line', delay: 450, duration: 350 },
+        { target: 'site-link', effect: 'line-down', delay: 450, duration: 350 },
       ] },
       { from: 'R3', to: 'R4A', duration: 400, anchor: 'trace-detail', motion: [
         { target: 'trace-outline', effect: 'fade', delay: 0, duration: 400 },
@@ -664,8 +661,6 @@ export const lateStyles = `
   border-inline-start: 4px solid var(--ink);
 }
 .late-board-plate {
-  /* The plate crops the PNG's transparent margin and aligns the cover to its visible interior. */
-  --board-interior: 10.2% 12.9% 14.3% 7.3%;
   position: relative;
   width: min(100%, clamp(390px, 145.6dvh - 610px, 660px));
   aspect-ratio: 747 / 513;
@@ -677,28 +672,12 @@ export const lateStyles = `
   overflow: clip;
   pointer-events: none;
 }
-.late-board-art {
-  position: absolute;
-  width: 117.94%;
-  max-width: none;
-  top: -13.06%;
-  left: -8.97%;
-}
 .late-board-surface::after {
   position: absolute;
   inset: var(--board-interior);
   content: "";
-  border-radius: 5px;
-  background:
-    linear-gradient(90deg, rgb(35 92 122 / 10%) 1px, transparent 1px) 0 0 / 24px 24px,
-    linear-gradient(rgb(35 92 122 / 10%) 1px, transparent 1px) 0 0 / 24px 24px,
-    var(--blue);
-}
-.late-board-exit {
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  pointer-events: none;
+  border-radius: var(--board-radius);
+  background: var(--board-paper);
 }
 .late-familiar { position: relative; isolation: isolate; }
 .late-connected-heading { position: relative; }

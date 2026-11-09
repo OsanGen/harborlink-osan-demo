@@ -1,11 +1,12 @@
 import { lessonPages } from './lesson-data.js?v=7';
-import { earlyScenes, earlyStyles } from './scenes-early.js?v=7';
-import { lateScenes, lateStyles } from './scenes-late.js?v=8';
+import { earlyScenes, earlyStyles } from './scenes-early.js?v=9';
+import { lateScenes, lateStyles } from './scenes-late.js?v=9';
 
 const scenes = { ...earlyScenes, ...lateScenes };
 const PRESENTATION_SCALE = 2.5;
 const MIN_REVEAL_MS = 1400;
 const READING_PAUSE_MS = 700;
+const REFLOW_FADE_MS = 220;
 const pageStates = lessonPages.map(({ id }) => ['R0', ...scenes[id].beats.map(beat => beat.to)]);
 const stickers = {
   A001: ['A001_planning_board.png', 881, 647, 50],
@@ -158,9 +159,16 @@ function motionFrames(effect) {
     case 'fade-out':
       return [{ opacity: 1 }, { opacity: 0 }];
     case 'focus':
-      return [{ boxShadow: '0 0 0 0 transparent' }, { boxShadow: '0 0 0 3px #235c7a' }];
+      return [
+        { boxShadow: '0 0 0 0 transparent' },
+        { boxShadow: '0 0 0 3px #235c7a', offset: 0.45 },
+        { boxShadow: '0 0 0 3px #235c7a', offset: 0.75 },
+        { boxShadow: '0 0 0 0 transparent' },
+      ];
     case 'line':
       return [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }];
+    case 'line-down':
+      return [{ clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0 0 0 0)' }];
     case 'rise':
       return [{ translate: '0 12px', opacity: 0 }, { translate: 'none', opacity: 1 }];
     default:
@@ -214,11 +222,14 @@ function playPhase(active, animations, onFinish) {
   });
 }
 
-function revealDestination(beat, active, timeScale) {
-  const exit = beat.exit ?? 0;
+function mountDestination(beat) {
   renderScene(beat.to, beat);
   renderTakeaway(beat.to, true);
   fitLesson();
+}
+
+function revealDestination(beat, active, timeScale, entrance = 0) {
+  const exit = beat.exit ?? 0;
   const targets = Array.from(stage.querySelectorAll('[data-motion]'));
   if (!takeaway.hidden) targets.push(takeaway);
   const animations = beat.motion.flatMap(({ target, effect, delay = 0, duration }) =>
@@ -228,11 +239,11 @@ function revealDestination(beat, active, timeScale) {
         delay: (delay - exit) * timeScale,
         duration: duration * timeScale,
         fill: 'both',
-        easing: ['line', 'fade', 'fade-out'].includes(effect) ? 'linear' : 'cubic-bezier(0.22, 1, 0.36, 1)',
+        easing: ['line', 'line-down', 'fade', 'fade-out', 'focus'].includes(effect) ? 'linear' : 'cubic-bezier(0.22, 1, 0.36, 1)',
       })));
-  if (exit) {
+  if (entrance) {
     animations.push(lesson.animate(motionFrames('fade'), {
-      duration: exit * timeScale,
+      duration: entrance,
       fill: 'both',
     }));
   }
@@ -252,20 +263,36 @@ function startBeat(beat) {
   presentation.active = active;
   renderTransport();
   announcement.textContent = `Revealing step ${destinationStep + 1} of ${lastStep() + 1}.`;
-  if (!beat.exit) {
-    revealDestination(beat, active, timeScale);
-    return;
+  let exitTime = (beat.exit ?? 0) * timeScale;
+  if (!exitTime) {
+    const source = stage.firstElementChild;
+    const sourceLayout = lesson.style.cssText;
+    const sourceWidth = lesson.offsetWidth;
+    const sourceScale = Number(lesson.style.getPropertyValue('--lesson-scale'));
+    mountDestination(beat);
+    const scaleChange = Math.abs(sourceScale - Number(lesson.style.getPropertyValue('--lesson-scale')));
+    if (Math.abs(lesson.offsetWidth - sourceWidth) <= 1 && scaleChange <= 0.015) {
+      revealDestination(beat, active, timeScale);
+      return;
+    }
+
+    // Restore the source before paint so it fades at its original size and position.
+    stage.replaceChildren(source);
+    renderTakeaway(beat.from);
+    lesson.style.cssText = sourceLayout;
+    exitTime = REFLOW_FADE_MS;
   }
 
   stage.setAttribute('aria-busy', 'true');
   stage.firstElementChild.inert = true;
   const outgoing = lesson.animate(motionFrames('fade-out'), {
-    duration: beat.exit * timeScale,
+    duration: exitTime,
     fill: 'both',
   });
   playPhase(active, [outgoing], () => {
     outgoing.cancel();
-    revealDestination(beat, active, timeScale);
+    mountDestination(beat);
+    revealDestination(beat, active, timeScale, Math.min(exitTime, 450));
   });
 }
 

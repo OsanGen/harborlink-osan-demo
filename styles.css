@@ -123,6 +123,37 @@ li + li { margin-top: 0.22em; }
   transform-origin: inherit;
 }
 
+.early-board, .late-board-plate {
+  /* Measure the inner rim from the cropped 747 × 513 board artwork. */
+  --board-top: 9.95%;
+  --board-right: 12.85%;
+  --board-bottom: 14.23%;
+  --board-left: 7.36%;
+  --board-interior: var(--board-top) var(--board-right) var(--board-bottom) var(--board-left);
+  --board-radius: 1.6% / 2.5%;
+  --board-paper:
+    linear-gradient(90deg, rgb(35 92 122 / 13%) 1px, transparent 1px) center / calc(100% / 14) calc(100% / 9),
+    linear-gradient(rgb(35 92 122 / 13%) 1px, transparent 1px) center / calc(100% / 14) calc(100% / 9),
+    var(--blue);
+}
+
+.board-artwork {
+  position: absolute;
+  width: 117.94%;
+  max-width: none;
+  top: -13.06%;
+  left: -8.97%;
+}
+
+.board-artwork::after {
+  /* Fill the light channel in the PNG's left rail between its two corners. */
+  content: "";
+  position: absolute;
+  inset: 19.5% auto 22.4% 12.66%;
+  width: 1.26%;
+  background: var(--ink);
+}
+
 .sticker-fallback { display: none; }
 .sticker.is-missing img { display: none; }
 .sticker.is-missing:not([data-sticker="A001"]) .sticker-fallback {

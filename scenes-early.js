@@ -9,14 +9,17 @@ function planningBoard(state, ui) {
     ['plan', 'A005'],
     ['reviewer', 'A004'],
   ];
+  const opening = covered || state === 'R1';
+  const caseCopy = opening ? ui.block(2) + ui.block(3) : '';
   return `<div class="early-plan">
-    <div class="early-reading early-plan-reading" data-motion="case">
-      ${state === 'R1' ? ui.block(2) + ui.block(3) : ui.part('intro')}
+    <div class="early-plan-reading">
+      <div class="early-reading${state === 'R1' && !lifting ? ' early-plan-spacer' : ''}"${state === 'R1' ? ' aria-hidden="true" inert' : ''}${lifting ? ' data-motion="intro"' : ''}>${ui.part('intro')}</div>
+      ${opening ? `<div class="early-reading${covered ? ' early-plan-spacer' : ''}" data-motion="case"${covered ? ' aria-hidden="true" inert' : ''}>${caseCopy}</div>` : ''}
     </div>
     ${showingSpec ? `<section class="early-spec" data-motion="spec">${ui.block(4)}</section>` : ''}
     <div class="early-board">
       <div class="early-board-plate" aria-hidden="true">
-        <div class="early-board-art">${ui.asset('A001')}</div>
+        <div class="early-board-art">${ui.asset('A001', 'board-artwork')}</div>
         <div class="early-board-window">
           ${covered ? '' : `<div class="early-plan-objects">
             ${objects.map(([name, art]) => `<div class="early-plan-object" data-motion="${name}">
@@ -188,6 +191,7 @@ export const earlyScenes = {
     beats: [
       { from: 'R0', to: 'R1', duration: 1400, anchor: 'request', motion: [
         { target: 'cover', effect: 'lift', delay: 0, duration: 650 },
+        { target: 'intro', effect: 'fade-out', delay: 0, duration: 350 },
         { target: 'case', effect: 'fade', delay: 350, duration: 300 },
         { target: 'request', effect: 'focus', delay: 650, duration: 250 },
         { target: 'plan', effect: 'focus', delay: 900, duration: 250 },
@@ -282,15 +286,17 @@ export const earlyStyles = `
   gap: clamp(1rem, 2.5vw, 2.5rem);
   align-items: start;
 }
-.early-plan-reading { grid-area: intro; }
-.early-plan-reading > p + h3 { margin-top: 1em; }
+.early-plan-reading { grid-area: intro; display: grid; }
+.early-plan-reading > div { grid-area: 1 / 1; }
+/* Keep the opening board in place while the introduction changes to the case. */
+.early-plan-spacer { visibility: hidden; }
+.early-plan-reading p + h3 { margin-top: 1em; }
 .early-reading { min-width: 0; }
 .early-reading > :first-child, .early-record > :first-child,
 .early-authority h3, .early-status h3 { margin-top: 0; }
 .early-reading > :last-child, .early-record > :last-child,
 .early-authority p:last-child, .early-status p:last-child { margin-bottom: 0; }
 .early-board {
-  --board-interior: 10.2% 12.9% 14.3% 7.3%;
   grid-area: board;
   width: min(100%, clamp(440px, 140dvh - 550px, 590px));
   margin-inline: auto;
@@ -302,19 +308,12 @@ export const earlyStyles = `
 }
 .early-board-art, .early-board-window, .early-cover { position: absolute; inset: 0; }
 .early-board-art, .early-board-window { overflow: clip; }
-.early-board-art .sticker {
-  position: absolute;
-  width: 117.94%;
-  max-width: none;
-  top: -13.06%;
-  left: -8.97%;
+.early-board-window {
+  inset: var(--board-interior);
+  border-radius: var(--board-radius);
+  background: var(--canvas);
 }
-.early-board-window { inset: var(--board-interior); border-radius: 6px; }
-.early-cover {
-  background: var(--blue);
-  background-image: repeating-linear-gradient(0deg, transparent 0 23px, #235c7a29 23px 24px),
-    repeating-linear-gradient(90deg, transparent 0 23px, #235c7a29 23px 24px);
-}
+.early-cover { background: var(--board-paper); }
 .early-plan-objects {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -338,7 +337,7 @@ export const earlyStyles = `
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(8px, 1vw, 14px);
   list-style: none;
-  padding: 0 12.9% 0 7.3%;
+  padding: 0 var(--board-right) 0 var(--board-left);
   margin-block: 14px 0;
 }
 .early-plan-questions li {
