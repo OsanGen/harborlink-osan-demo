@@ -54,10 +54,13 @@ function workflowDetail(state, ui) {
     case 'R0':
       return `<div class="early-reading">${ui.block(3)}</div>`;
     case 'R1':
-      return `<div class="early-reading">
-        <div data-motion="step-copy">${ui.part('workflow1to3')}</div>
-        <div class="early-record" data-motion="saved">${ui.part('savedFirst')}</div>
-      </div>`;
+      return `<ol class="early-triage-actions" role="list" data-motion="step-copy">
+        ${ui.part('workflowSteps').slice(0, 3).map(({ name, description }, index) => `<li>
+          <span class="early-triage-number" aria-hidden="true">${index + 1}</span>
+          <div><strong>${name}:</strong> ${description}</div>
+        </li>`).join('')}
+      </ol>
+      <section class="early-triage-result" data-motion="saved">${ui.part('savedFirst')}</section>`;
     case 'R2':
       return `<div class="early-reading">
         <div data-motion="step-copy">${ui.part('workflow4to5')}</div>
@@ -80,7 +83,7 @@ function workflowDetail(state, ui) {
 }
 
 function workflow(state, ui) {
-  return `<div class="early-workflow">
+  return `<div class="early-workflow${state === 'R1' ? ' early-workflow-triage' : ''}">
     <article class="early-ticket" data-object="ticket-a">
       <div>${ui.block(2)}</div>
       ${ui.asset('A002', 'early-ticket-art')}
@@ -418,6 +421,62 @@ export const earlyStyles = `
 .early-workflow-detail ol { padding-inline-start: 1.35em; }
 .early-workflow-detail ol li + li { margin-top: .35rem; }
 .early-reading > [data-motion="step-copy"] + .early-record { margin-top: .7rem; }
+.early-workflow-triage {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr) minmax(0, 1.05fr);
+  grid-template-areas: 'rail rail rail' 'ticket actions result' 'authority authority authority';
+  align-items: stretch;
+  column-gap: clamp(12px, 1.6vw, 22px);
+}
+.early-workflow-triage .early-workflow-detail { display: contents; }
+.early-workflow-triage .early-ticket, .early-triage-result {
+  padding: .7rem .85rem;
+  border: 1px solid var(--divider);
+  border-radius: .6rem;
+}
+.early-workflow-triage .early-ticket { grid-template-columns: minmax(0, 1fr) 2.25rem; }
+.early-workflow-triage .early-triage-actions {
+  grid-area: actions;
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  gap: .38rem;
+  padding: 0;
+  list-style: none;
+}
+.early-workflow-triage .early-triage-actions > li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: center;
+  align-items: start;
+  gap: .55rem;
+  margin: 0;
+  padding: .5rem .65rem;
+  border: 1px solid var(--divider);
+  border-radius: .5rem;
+  line-height: 1.3;
+  font-size: .92em;
+}
+.early-triage-actions strong { display: block; }
+.early-triage-number {
+  display: grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  background: var(--blue);
+  color: var(--focus);
+  font-weight: 750;
+}
+.early-triage-result { grid-area: result; line-height: 1.3; }
+.early-triage-result dl > div { padding: .35rem 0; border-top: 1px solid var(--divider); }
+.early-triage-result dl > div:first-child { border-top: 0; }
+.early-triage-result dl > div:last-child {
+  padding: .35rem .5rem;
+  border: 0;
+  border-radius: .35rem;
+  background: var(--yellow);
+}
+.early-triage-result dt { font-size: .76em; font-weight: 700; color: var(--muted); }
+.early-triage-result dd { margin-inline-start: 0; font-size: .92em; }
 .early-draft, .early-authority { display: flex; align-items: flex-start; gap: .75rem; }
 .early-routing-art { flex: 0 0 2rem; max-width: 24%; }
 .early-routing > div { min-width: 0; }
@@ -530,6 +589,7 @@ export const earlyStyles = `
   .early-plan:has(.early-spec) { grid-template-areas: "intro" "spec" "board"; }
   .early-systems-with-diagram { grid-template-areas: "detail" "diagram" "map"; }
   .early-workflow { grid-template-areas: 'ticket' 'rail' 'detail' 'authority'; }
+  .early-workflow-triage { grid-template-areas: 'ticket' 'rail' 'actions' 'result' 'authority'; }
   .early-workflow-detail { padding-block: .25rem; }
   .early-routing { grid-template-columns: minmax(0, 1fr); }
 }

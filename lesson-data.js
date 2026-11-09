@@ -49,17 +49,18 @@ function workflowRange(start, end) {
   );
   return `<ol start="${start}">${items.join('')}</ol>`;
 }
-const workflow1to3 = workflowRange(1, 3);
 const workflow4to5 = workflowRange(4, 5);
 const workflow6to7 = workflowRange(6, 7);
 const workflowThroughout = `<p>Logging and escalation apply throughout, not only at the end.</p>`;
 const savedHeading = `<h3>Ticket A in the saved example</h3>`;
-const savedClassification = `<p>Classification: Billing-charge explanation.</p>`;
-const savedPriority = `<p>Priority: Proposed normal pending account check.</p>`;
+const savedClassification = ['Classification', 'Billing-charge explanation.'];
+const savedPriority = ['Priority', 'Proposed normal pending account check.'];
 const savedOwner = `<p>Suggested owner: Billing Specialist.</p>`;
-const savedConfidence = `<p>Confidence: Unknown, not scored.</p>`;
+const savedConfidence = ['Confidence', 'Unknown, not scored.'];
 const savedReply = `<p>Ticket A reply: Not generated in the supplied saved example.</p>`;
-const savedFirst = `${savedHeading}${savedClassification}${savedPriority}${savedConfidence}`;
+const savedLine = ([label, value]) => `<p>${label}: ${value}</p>`;
+const savedFirst = `${savedHeading}<dl>${[savedClassification, savedPriority, savedConfidence]
+  .map(([label, value]) => `<div><dt>${label}:</dt> <dd>${value}</dd></div>`).join('')}</dl>`;
 const savedLater = `${savedHeading}${savedOwner}${savedReply}`;
 
 const systemHeading = `<h3>HarborLink's proposed system environment</h3>`;
@@ -203,7 +204,7 @@ export const lessonPages = [
       "S002-C03": `<h3>Triage</h3>
         <p>Sort the request, assess urgency, and recommend who should handle it.</p>`,
       "S002-C04": `${workflowHeading}${workflowRange(1, 7)}${workflowThroughout}`,
-      "S002-C05": `${savedHeading}${savedClassification}${savedPriority}${savedOwner}${savedConfidence}${savedReply}`,
+      "S002-C05": `${savedHeading}${savedLine(savedClassification)}${savedLine(savedPriority)}${savedOwner}${savedLine(savedConfidence)}${savedReply}`,
       "S002-C06": `<h3>Human responsibility</h3>
         <p>People move tickets and send customer messages.</p>`,
       "S002-C07": `<h3>Takeaway</h3>
@@ -218,7 +219,6 @@ export const lessonPages = [
     parts: {
       workflowSteps,
       workflowHeading,
-      workflow1to3,
       workflow4to5,
       workflow6to7,
       workflowThroughout,

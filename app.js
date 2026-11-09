@@ -1,5 +1,5 @@
-import { lessonPages } from './lesson-data.js?v=2';
-import { earlyScenes, earlyStyles } from './scenes-early.js?v=5';
+import { lessonPages } from './lesson-data.js?v=6';
+import { earlyScenes, earlyStyles } from './scenes-early.js?v=6';
 import { lateScenes, lateStyles } from './scenes-late.js?v=5';
 
 const scenes = { ...earlyScenes, ...lateScenes };
