@@ -65,6 +65,12 @@ li + li { margin-top: 0.22em; }
 
 .presentation-content:focus-visible { outline-offset: -4px; box-shadow: none; }
 
+.presentation-content.is-scrollable {
+  overflow: hidden auto;
+  overscroll-behavior-y: contain;
+  overflow-anchor: none;
+}
+
 .lesson {
   flex: none;
   width: var(--layout-width, min(100%, var(--lesson-width)));
@@ -145,7 +151,7 @@ li + li { margin-top: 0.22em; }
   left: -8.97%;
 }
 
-.board-artwork::after {
+.board-artwork:not(.is-missing)::after {
   /* Fill the light channel in the PNG's left rail between its two corners. */
   content: "";
   position: absolute;

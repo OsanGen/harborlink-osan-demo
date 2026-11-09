@@ -7,6 +7,7 @@ const PRESENTATION_SCALE = 2.5;
 const MIN_REVEAL_MS = 1400;
 const READING_PAUSE_MS = 700;
 const REFLOW_FADE_MS = 220;
+const MIN_COMPACT_BODY_SIZE = 16;
 const pageStates = lessonPages.map(({ id }) => ['R0', ...scenes[id].beats.map(beat => beat.to)]);
 const stickers = {
   A001: ['A001_planning_board.png', 881, 647, 50],
@@ -41,6 +42,7 @@ const panel = element('reading-panel');
 const panelTitle = element('panel-title');
 const panelContent = element('panel-content');
 const systemMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const compactViewport = matchMedia('(max-width: 680px), (max-height: 480px)');
 
 const presentation = {
   pageIndex: 0,
@@ -126,7 +128,7 @@ function stopBeat() {
   active?.animations.forEach(animation => animation.cancel());
 }
 
-function commit(stepIndex, pageIndex = presentation.pageIndex, pauseForReading = false) {
+function commit(stepIndex, pageIndex = presentation.pageIndex, pauseForReading = false, scrollTop = 0) {
   const focused = document.activeElement;
   stopBeat();
   clearTimeout(presentation.readingTimer);
@@ -137,6 +139,7 @@ function commit(stepIndex, pageIndex = presentation.pageIndex, pauseForReading =
   presentation.pageIndex = pageIndex;
   presentation.stepIndex = stepIndex;
   renderCommitted();
+  content.scrollTop = scrollTop;
   announcement.textContent = indicator.textContent;
   if (focused === previous && previous.disabled) next.focus({ preventScroll: true });
   if (focused === next && next.disabled) previous.focus({ preventScroll: true });
@@ -178,7 +181,7 @@ function motionFrames(effect) {
 
 function fitLesson() {
   const style = getComputedStyle(content);
-  const width = content.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const width = content.offsetWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
   const height = content.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - 1;
   if (width <= 0 || height <= 0) return;
 
@@ -206,8 +209,12 @@ function fitLesson() {
     }
   }
 
-  lesson.style.setProperty('--layout-width', `${best.layoutWidth}px`);
-  lesson.style.setProperty('--lesson-scale', best.scale);
+  const bodySize = parseFloat(getComputedStyle(stage).fontSize);
+  const scrollable = compactViewport.matches && best.scale * bodySize < MIN_COMPACT_BODY_SIZE;
+  content.classList.toggle('is-scrollable', scrollable);
+  if (scrollable) lesson.style.removeProperty('--layout-width');
+  else lesson.style.setProperty('--layout-width', `${best.layoutWidth}px`);
+  lesson.style.setProperty('--lesson-scale', scrollable ? 1 : best.scale);
 }
 
 function playPhase(active, animations, onFinish) {
@@ -226,6 +233,7 @@ function mountDestination(beat) {
   renderScene(beat.to, beat);
   renderTakeaway(beat.to, true);
   fitLesson();
+  content.scrollTop = 0;
 }
 
 function revealDestination(beat, active, timeScale, entrance = 0) {
@@ -248,7 +256,7 @@ function revealDestination(beat, active, timeScale, entrance = 0) {
     }));
   }
   animations.push(stage.animate([], (beat.duration - exit) * timeScale));
-  playPhase(active, animations, () => commit(active.destinationStep, presentation.pageIndex, true));
+  playPhase(active, animations, () => commit(active.destinationStep, presentation.pageIndex, true, content.scrollTop));
 }
 
 function startBeat(beat) {
@@ -259,19 +267,22 @@ function startBeat(beat) {
   }
 
   const timeScale = Math.max(PRESENTATION_SCALE, MIN_REVEAL_MS / beat.duration);
-  const active = { destinationStep, animations: [] };
+  const active = { destinationStep, animations: [], sourceScroll: content.scrollTop };
   presentation.active = active;
   renderTransport();
   announcement.textContent = `Revealing step ${destinationStep + 1} of ${lastStep() + 1}.`;
   let exitTime = (beat.exit ?? 0) * timeScale;
+  if (active.sourceScroll) exitTime ||= REFLOW_FADE_MS;
   if (!exitTime) {
     const source = stage.firstElementChild;
     const sourceLayout = lesson.style.cssText;
     const sourceWidth = lesson.offsetWidth;
     const sourceScale = Number(lesson.style.getPropertyValue('--lesson-scale'));
+    const sourceScrollable = content.classList.contains('is-scrollable');
     mountDestination(beat);
     const scaleChange = Math.abs(sourceScale - Number(lesson.style.getPropertyValue('--lesson-scale')));
-    if (Math.abs(lesson.offsetWidth - sourceWidth) <= 1 && scaleChange <= 0.015) {
+    const sameScrollMode = content.classList.contains('is-scrollable') === sourceScrollable;
+    if (sameScrollMode && Math.abs(lesson.offsetWidth - sourceWidth) <= 1 && scaleChange <= 0.015) {
       revealDestination(beat, active, timeScale);
       return;
     }
@@ -280,6 +291,7 @@ function startBeat(beat) {
     stage.replaceChildren(source);
     renderTakeaway(beat.from);
     lesson.style.cssText = sourceLayout;
+    content.classList.toggle('is-scrollable', sourceScrollable);
     exitTime = REFLOW_FADE_MS;
   }
 
@@ -316,7 +328,7 @@ function goBack(event) {
   if (event.detail > 1 || panel.open || previous.disabled) return;
   prepareNavigation();
   if (presentation.active) {
-    commit(presentation.stepIndex);
+    commit(presentation.stepIndex, presentation.pageIndex, false, presentation.active.sourceScroll);
   } else if (presentation.stepIndex > 0) {
     commit(presentation.stepIndex - 1);
   } else {
