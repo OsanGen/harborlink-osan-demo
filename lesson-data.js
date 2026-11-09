@@ -49,19 +49,15 @@ function workflowRange(start, end) {
   );
   return `<ol start="${start}">${items.join('')}</ol>`;
 }
-const workflow4to5 = workflowRange(4, 5);
-const workflow6to7 = workflowRange(6, 7);
 const workflowThroughout = `<p>Logging and escalation apply throughout, not only at the end.</p>`;
 const savedHeading = `<h3>Ticket A in the saved example</h3>`;
-const savedClassification = ['Classification', 'Billing-charge explanation.'];
-const savedPriority = ['Priority', 'Proposed normal pending account check.'];
-const savedOwner = `<p>Suggested owner: Billing Specialist.</p>`;
-const savedConfidence = ['Confidence', 'Unknown, not scored.'];
-const savedReply = `<p>Ticket A reply: Not generated in the supplied saved example.</p>`;
-const savedLine = ([label, value]) => `<p>${label}: ${value}</p>`;
-const savedFirst = `${savedHeading}<dl>${[savedClassification, savedPriority, savedConfidence]
-  .map(([label, value]) => `<div><dt>${label}:</dt> <dd>${value}</dd></div>`).join('')}</dl>`;
-const savedLater = `${savedHeading}${savedOwner}${savedReply}`;
+const savedFields = {
+  classification: ['Classification', 'Billing-charge explanation.'],
+  priority: ['Priority', 'Proposed normal pending account check.'],
+  owner: ['Suggested owner', 'Billing Specialist.'],
+  confidence: ['Confidence', 'Unknown, not scored.'],
+  reply: ['Ticket A reply', 'Not generated in the supplied saved example.'],
+};
 
 const systemHeading = `<h3>HarborLink's proposed system environment</h3>`;
 const systemNames = ["Zendesk", "Salesforce", "Legacy billing platform", "SharePoint", "Email and web chat", "Power BI"];
@@ -204,7 +200,7 @@ export const lessonPages = [
       "S002-C03": `<h3>Triage</h3>
         <p>Sort the request, assess urgency, and recommend who should handle it.</p>`,
       "S002-C04": `${workflowHeading}${workflowRange(1, 7)}${workflowThroughout}`,
-      "S002-C05": `${savedHeading}${savedLine(savedClassification)}${savedLine(savedPriority)}${savedOwner}${savedLine(savedConfidence)}${savedReply}`,
+      "S002-C05": `${savedHeading}${Object.values(savedFields).map(([label, value]) => `<p>${label}: ${value}</p>`).join('')}`,
       "S002-C06": `<h3>Human responsibility</h3>
         <p>People move tickets and send customer messages.</p>`,
       "S002-C07": `<h3>Takeaway</h3>
@@ -219,14 +215,9 @@ export const lessonPages = [
     parts: {
       workflowSteps,
       workflowHeading,
-      workflow4to5,
-      workflow6to7,
       workflowThroughout,
       savedHeading,
-      savedFirst,
-      savedLater,
-      savedOwner,
-      savedReply,
+      savedFields,
     },
   }),
   page({

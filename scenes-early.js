@@ -33,14 +33,15 @@ function planningBoard(state, ui) {
   </div>`;
 }
 
+const workflowGroups = { R1: [0, 3], R2: [3, 5], R3: [5, 7] };
+
 function workflowRail(ui, state) {
-  const activeByState = { R1: [0, 1, 2], R2: [3, 4], R3: [5, 6] };
-  const active = activeByState[state] ?? [];
+  const [start, end] = workflowGroups[state] ?? [0, 0];
   return `<div class="early-rail">
     ${ui.part('workflowHeading')}
     <ol class="early-steps" role="list">
       ${ui.part('workflowSteps').map(({ name }, index) => `
-        <li class="${active.includes(index) ? 'early-step-active' : ''}">
+        <li class="${index >= start && index < end ? 'early-step-active' : ''}">
           <span class="early-step-number" aria-hidden="true">${index + 1}</span>
           <span>${name}</span>
           <span class="early-step-line" data-motion="workflow-step-${index + 1}" aria-hidden="true"></span>
@@ -49,55 +50,50 @@ function workflowRail(ui, state) {
   </div>`;
 }
 
-function workflowDetail(state, ui) {
-  switch (state) {
-    case 'R0':
-      return `<div class="early-reading">${ui.block(3)}</div>`;
-    case 'R1':
-      return `<ol class="early-triage-actions" role="list" data-motion="step-copy">
-        ${ui.part('workflowSteps').slice(0, 3).map(({ name, description }, index) => `<li>
-          <span class="early-triage-number" aria-hidden="true">${index + 1}</span>
-          <div><strong>${name}:</strong> ${description}</div>
-        </li>`).join('')}
-      </ol>
-      <section class="early-triage-result" data-motion="saved">${ui.part('savedFirst')}</section>`;
-    case 'R2':
-      return `<div class="early-reading">
-        <div data-motion="step-copy">${ui.part('workflow4to5')}</div>
-        <div class="early-record early-routing">
-          ${ui.part('savedHeading')}
-          <div class="early-route-proposal" data-motion="owner">
-            <div class="early-route-line" data-motion="route" aria-hidden="true"></div>
-            <div class="early-owner">${ui.part('savedOwner')}</div>
-          </div>
-          <div class="early-draft" data-motion="draft">
-            ${ui.asset('A005', 'early-routing-art')}${ui.part('savedReply')}
-          </div>
-        </div>
-      </div>`;
-    case 'R3':
-      return `<div class="early-reading" data-motion="step-copy">${ui.part('workflow6to7')}</div>`;
-    case 'R4':
-      return `<div class="early-reading early-record" data-motion="saved" data-object="saved-example">${ui.block(5)}</div>`;
+function workflowActions(ui, [start, end]) {
+  return `<ol class="early-triage-actions" role="list" start="${start + 1}" data-motion="step-copy">
+    ${ui.part('workflowSteps').slice(start, end).map(({ name, description }, index) => `<li>
+      <span class="early-triage-number" aria-hidden="true">${start + index + 1}</span>
+      <div><strong>${name}:</strong> ${description}</div>
+    </li>`).join('')}
+  </ol>`;
+}
+
+function workflowResult(state, ui) {
+  if (state === 'R3') {
+    return `<aside class="early-triage-result early-triage-guidance" data-motion="guides">${ui.part('workflowThroughout')}</aside>`;
   }
+  const savedFields = ui.part('savedFields');
+  const keysByState = { R1: ['classification', 'priority', 'confidence'], R2: ['owner', 'reply'] };
+  const motions = state === 'R2' ? { owner: 'owner', reply: 'draft' } : {};
+  const keys = keysByState[state] ?? Object.keys(savedFields);
+  const rows = keys.map(key => {
+    const [label, value] = savedFields[key];
+    const highlight = key === 'confidence' ? ' class="early-result-confidence"' : '';
+    const motion = motions[key] ? ` data-motion="${motions[key]}"` : '';
+    return `<div${highlight}${motion}><dt>${label}:</dt> <dd>${value}</dd></div>`;
+  }).join('');
+  return `<section class="early-triage-result" data-motion="saved">${ui.part('savedHeading')}<dl>${rows}</dl></section>`;
 }
 
 function workflow(state, ui) {
-  return `<div class="early-workflow${state === 'R1' ? ' early-workflow-triage' : ''}">
+  const group = workflowGroups[state];
+  const opening = state === 'R0';
+  const layout = opening ? '' : ' early-workflow-triage' + (group ? '' : ' early-workflow-recap');
+  return `<div class="early-workflow${layout}">
     <article class="early-ticket" data-object="ticket-a">
       <div>${ui.block(2)}</div>
       ${ui.asset('A002', 'early-ticket-art')}
     </article>
     ${workflowRail(ui, state)}
-    <div class="early-workflow-detail">${workflowDetail(state, ui)}</div>
+    ${opening
+      ? `<div class="early-workflow-detail"><div class="early-reading">${ui.block(3)}</div></div>`
+      : (group ? workflowActions(ui, group) : '') + workflowResult(state, ui)}
     <aside class="early-authority" data-object="human-boundary">
       ${ui.asset('A004', 'early-authority-art')}
       <div>
         ${ui.block(6)}
-        <div class="early-throughout ${state === 'R3' ? 'early-throughout-active' : ''}">
-          ${ui.part('workflowThroughout')}
-          ${state === 'R3' ? '<span class="early-throughout-line" data-motion="guides" aria-hidden="true"></span>' : ''}
-        </div>
+        ${state === 'R3' ? '' : `<div class="early-throughout">${ui.part('workflowThroughout')}</div>`}
       </div>
     </aside>
   </div>`;
@@ -221,15 +217,15 @@ export const earlyScenes = {
         { target: 'step-copy', effect: 'fade', delay: 0, duration: 380 },
         { target: 'workflow-step-4', effect: 'line', delay: 100, duration: 420 },
         { target: 'workflow-step-5', effect: 'line', delay: 180, duration: 420 },
-        { target: 'owner', effect: 'slide-right', delay: 120, duration: 420 },
+        { target: 'saved', effect: 'fade', delay: 0, duration: 120 },
+        { target: 'owner', effect: 'fade', delay: 120, duration: 420 },
         { target: 'draft', effect: 'rise', delay: 180, duration: 420 },
-        { target: 'route', effect: 'line', delay: 200, duration: 400 },
       ] },
       { from: 'R2', to: 'R3', duration: 450, motion: [
         { target: 'step-copy', effect: 'fade', delay: 0, duration: 450 },
         { target: 'workflow-step-6', effect: 'line', delay: 0, duration: 450 },
         { target: 'workflow-step-7', effect: 'line', delay: 0, duration: 450 },
-        { target: 'guides', effect: 'line', delay: 0, duration: 450 },
+        { target: 'guides', effect: 'fade', delay: 0, duration: 450 },
       ] },
       { from: 'R3', to: 'R4', duration: 220, motion: [
         { target: 'saved', effect: 'fade', delay: 0, duration: 220 },
@@ -418,16 +414,13 @@ export const earlyStyles = `
 }
 .early-ticket blockquote { margin: .55rem 0 0; padding: 0; border: 0; }
 .early-ticket-art { inline-size: 100%; }
-.early-workflow-detail ol { padding-inline-start: 1.35em; }
-.early-workflow-detail ol li + li { margin-top: .35rem; }
-.early-reading > [data-motion="step-copy"] + .early-record { margin-top: .7rem; }
 .early-workflow-triage {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr) minmax(0, 1.05fr);
   grid-template-areas: 'rail rail rail' 'ticket actions result' 'authority authority authority';
   align-items: stretch;
   column-gap: clamp(12px, 1.6vw, 22px);
 }
-.early-workflow-triage .early-workflow-detail { display: contents; }
+.early-workflow-recap { grid-template-areas: 'rail rail rail' 'ticket result result' 'authority authority authority'; }
 .early-workflow-triage .early-ticket, .early-triage-result {
   padding: .7rem .85rem;
   border: 1px solid var(--divider);
@@ -437,7 +430,7 @@ export const earlyStyles = `
 .early-workflow-triage .early-triage-actions {
   grid-area: actions;
   display: grid;
-  grid-template-rows: repeat(3, 1fr);
+  grid-auto-rows: 1fr;
   gap: .38rem;
   padding: 0;
   list-style: none;
@@ -469,7 +462,7 @@ export const earlyStyles = `
 .early-triage-result { grid-area: result; line-height: 1.3; }
 .early-triage-result dl > div { padding: .35rem 0; border-top: 1px solid var(--divider); }
 .early-triage-result dl > div:first-child { border-top: 0; }
-.early-triage-result dl > div:last-child {
+.early-triage-result dl > .early-result-confidence {
   padding: .35rem .5rem;
   border: 0;
   border-radius: .35rem;
@@ -477,17 +470,17 @@ export const earlyStyles = `
 }
 .early-triage-result dt { font-size: .76em; font-weight: 700; color: var(--muted); }
 .early-triage-result dd { margin-inline-start: 0; font-size: .92em; }
-.early-draft, .early-authority { display: flex; align-items: flex-start; gap: .75rem; }
-.early-routing-art { flex: 0 0 2rem; max-width: 24%; }
-.early-routing > div { min-width: 0; }
-.early-ticket h3, .early-routing h3 { margin-top: 0; }
+.early-triage-guidance { background: var(--quiet); border-inline-start: 4px solid var(--focus); }
+.early-triage-guidance p { font-weight: 650; }
+.early-workflow-recap .early-triage-result dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, .42fr) minmax(0, 1fr);
+  align-items: baseline;
+  gap: .65rem;
+}
+.early-authority { display: flex; align-items: flex-start; gap: .75rem; }
+.early-ticket h3 { margin-top: 0; }
 .early-record { padding: .55rem .8rem; background: var(--quiet); border-inline-start: 3px solid var(--focus); }
-.early-routing { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .7rem; }
-.early-routing h3 { grid-column: 1 / -1; }
-.early-route-proposal { display: flex; align-items: center; }
-.early-route-line { flex: 0 0 clamp(.5rem, 2vw, 1.4rem); border-block-end: 2px dashed var(--muted); }
-.early-owner, .early-draft { padding: .35rem .5rem; }
-.early-draft { align-items: center; }
 .early-authority, .early-status {
   padding: .7rem .9rem;
   border-inline-start: 4px solid var(--focus);
@@ -497,15 +490,7 @@ export const earlyStyles = `
 .early-authority-art { flex: 0 0 2.5rem; max-width: 2.5rem; }
 .early-authority h3, .early-status h3 { margin-bottom: .25rem; }
 .early-authority p, .early-status p { margin-block: .2rem; }
-.early-throughout { display: inline-block; position: relative; }
-.early-throughout-active { font-weight: 650; }
-.early-throughout-line {
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: -.1rem;
-  height: 2px;
-  background: var(--focus);
-}
+.early-throughout { display: inline-block; }
 .early-systems-intro { max-width: 62ch; }
 .early-systems-inventory > h3 { margin-bottom: .65rem; }
 .early-systems-body { grid-template-columns: minmax(0, 56fr) minmax(0, 44fr); }
@@ -590,11 +575,14 @@ export const earlyStyles = `
   .early-systems-with-diagram { grid-template-areas: "detail" "diagram" "map"; }
   .early-workflow { grid-template-areas: 'ticket' 'rail' 'detail' 'authority'; }
   .early-workflow-triage { grid-template-areas: 'ticket' 'rail' 'actions' 'result' 'authority'; }
+  .early-workflow-recap { grid-template-areas: 'ticket' 'rail' 'result' 'authority'; }
   .early-workflow-detail { padding-block: .25rem; }
-  .early-routing { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 760px) {
   .early-steps { display: flex; flex-wrap: wrap; gap: .25rem .85rem; }
+  .early-workflow-triage .early-triage-actions:not([start="1"]) { grid-auto-rows: auto; }
+  .early-triage-result dl > [data-motion] dt,
+  .early-workflow-recap .early-triage-result dt { font-size: .82em; }
   .early-systems-inventory .early-systems { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {

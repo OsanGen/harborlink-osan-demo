@@ -1,5 +1,5 @@
-import { lessonPages } from './lesson-data.js?v=6';
-import { earlyScenes, earlyStyles } from './scenes-early.js?v=6';
+import { lessonPages } from './lesson-data.js?v=7';
+import { earlyScenes, earlyStyles } from './scenes-early.js?v=7';
 import { lateScenes, lateStyles } from './scenes-late.js?v=5';
 
 const scenes = { ...earlyScenes, ...lateScenes };
@@ -161,8 +161,6 @@ function motionFrames(effect) {
       return [{ boxShadow: '0 0 0 0 transparent' }, { boxShadow: '0 0 0 3px #235c7a' }];
     case 'line':
       return [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }];
-    case 'slide-right':
-      return [{ transform: 'translateX(-24px)', opacity: 0 }, { transform: 'none', opacity: 1 }];
     case 'rise':
       return [{ translate: '0 12px', opacity: 0 }, { translate: 'none', opacity: 1 }];
     default:
