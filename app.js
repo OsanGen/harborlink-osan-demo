@@ -1,6 +1,6 @@
 import { lessonPages } from './lesson-data.js?v=2';
-import { earlyScenes, earlyStyles } from './scenes-early.js?v=4';
-import { lateScenes, lateStyles } from './scenes-late.js?v=4';
+import { earlyScenes, earlyStyles } from './scenes-early.js?v=5';
+import { lateScenes, lateStyles } from './scenes-late.js?v=5';
 
 const scenes = { ...earlyScenes, ...lateScenes };
 const PRESENTATION_SCALE = 2.5;
@@ -22,6 +22,7 @@ document.head.append(sceneStyles);
 
 const element = id => document.getElementById(id);
 const content = element('presentation-content');
+const lesson = content.querySelector('.lesson');
 const title = element('page-title');
 const context = element('page-context');
 const workflow = element('workflow-context');
@@ -109,6 +110,7 @@ function renderCommitted() {
   renderScene(state());
   renderTakeaway(state());
   renderTransport();
+  fitLesson();
 }
 
 function renderTakeaway(destination, entering = false) {
@@ -168,34 +170,50 @@ function motionFrames(effect) {
   }
 }
 
-function bringRevealIntoView(beat) {
-  const cue = beat.anchor ?? beat.motion.find(({ effect }) =>
-    effect === 'fade' || effect === 'rise' || effect === 'slide-right')?.target;
-  if (!cue) return;
-  const target = cue === 'takeaway' ? takeaway : stage.querySelector(`[data-motion~="${cue}"]`);
-  if (!target) return;
+function fitLesson() {
+  const style = getComputedStyle(content);
+  const width = content.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const height = content.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - 1;
+  if (width <= 0 || height <= 0) return;
 
-  const bounds = target.getBoundingClientRect();
-  const viewport = content.getBoundingClientRect();
-  const visibleHeight = Math.min(bounds.height, 144, viewport.height / 2);
-  if (bounds.top < viewport.top) {
-    content.scrollTop += bounds.top - viewport.top - 16;
-  } else if (bounds.top + visibleHeight > viewport.bottom) {
-    content.scrollTop += bounds.top + visibleHeight - viewport.bottom + 16;
+  const maxWidth = parseFloat(style.getPropertyValue('--lesson-width'));
+  const measure = layoutWidth => {
+    lesson.style.setProperty('--layout-width', `${layoutWidth}px`);
+    const vertical = height / lesson.offsetHeight;
+    const horizontal = width / Math.max(layoutWidth, lesson.scrollWidth);
+    return { layoutWidth, scale: Math.min(1, horizontal, vertical), heightLimited: vertical < horizontal };
+  };
+
+  let lower = Math.min(width, maxWidth);
+  let best = measure(lower);
+  let upper = Math.min(maxWidth, width / best.scale);
+
+  // Wider wrapping can fit dense steps at a larger readable scale.
+  if (upper - lower >= 1) {
+    const widest = measure(upper);
+    if (widest.scale > best.scale) best = widest;
+    for (let attempt = 0; attempt < 5 && upper - lower >= 1; attempt++) {
+      const candidate = measure((lower + upper) / 2);
+      if (candidate.scale > best.scale) best = candidate;
+      if (candidate.heightLimited) lower = candidate.layoutWidth;
+      else upper = candidate.layoutWidth;
+    }
   }
+
+  lesson.style.setProperty('--layout-width', `${best.layoutWidth}px`);
+  lesson.style.setProperty('--lesson-scale', best.scale);
 }
 
 function startBeat(beat) {
   const destinationStep = presentation.stepIndex + 1;
   if (reducedMotion()) {
     commit(destinationStep, presentation.pageIndex, true);
-    bringRevealIntoView(beat);
     return;
   }
 
   renderScene(beat.to, beat);
   renderTakeaway(beat.to, true);
-  bringRevealIntoView(beat);
+  fitLesson();
   const targets = Array.from(stage.querySelectorAll('[data-motion]'));
   if (!takeaway.hidden) targets.push(takeaway);
   const timeScale = Math.max(PRESENTATION_SCALE, MIN_REVEAL_MS / beat.duration);
@@ -225,7 +243,6 @@ function startBeat(beat) {
 
 function prepareNavigation() {
   options.open = false;
-  content.scrollTop = 0;
 }
 
 function goForward(event) {
@@ -299,7 +316,10 @@ panel.addEventListener('close', () => {
 });
 
 stage.addEventListener('error', event => {
-  if (event.target instanceof HTMLImageElement) event.target.closest('.sticker')?.classList.add('is-missing');
+  if (event.target instanceof HTMLImageElement) {
+    event.target.closest('.sticker')?.classList.add('is-missing');
+    fitLesson();
+  }
 }, true);
 
 document.addEventListener('keydown', event => {
@@ -335,3 +355,4 @@ document.addEventListener('click', event => {
 
 syncMotionPreference();
 renderCommitted();
+new ResizeObserver(fitLesson).observe(content);

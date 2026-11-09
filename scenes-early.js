@@ -332,6 +332,7 @@ export const earlyStyles = `
   background: var(--quiet);
   border-radius: .5rem;
 }
+.early-plan-object[data-motion="reviewer"] { background: var(--pink); }
 .early-plan-sticker { width: min(84%, 8rem); height: min(78%, 8rem); }
 .early-plan-questions {
   display: grid;
@@ -433,7 +434,7 @@ export const earlyStyles = `
   border-inline-start: 4px solid var(--focus);
   border-radius: .35rem;
 }
-.early-authority { background: var(--blue); }
+.early-authority { background: var(--pink); }
 .early-authority-art { flex: 0 0 2.5rem; max-width: 2.5rem; }
 .early-authority h3, .early-status h3 { margin-bottom: .25rem; }
 .early-authority p, .early-status p { margin-block: .2rem; }
@@ -523,7 +524,7 @@ export const earlyStyles = `
 .early-middleware .early-api { background: #d4f3e5; padding-inline: .4rem; }
 .early-status { background: var(--yellow); }
 .early-questions > :first-child { margin-top: 0; }
-@media (max-width: 1023px) {
+@media (max-width: 1023px) and (orientation: portrait), (max-width: 760px) {
   .early-plan, .early-workflow, .early-systems-body { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
   .early-plan { grid-template-areas: "intro" "board"; grid-template-rows: auto; }
   .early-plan:has(.early-spec) { grid-template-areas: "intro" "spec" "board"; }

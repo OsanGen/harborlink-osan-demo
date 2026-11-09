@@ -457,8 +457,8 @@ export const lateStyles = `
   background: var(--outcome-surface);
 }
 .late-outcome-continue { --outcome-accent: #357768; --outcome-surface: #edf7f4; }
-.late-outcome-wait { --outcome-accent: #956826; --outcome-surface: #fff8e0; }
-.late-outcome-authority { --outcome-accent: #404b59; --outcome-surface: var(--quiet); }
+.late-outcome-wait { --outcome-accent: #956826; --outcome-surface: var(--yellow); }
+.late-outcome-authority { --outcome-accent: #98536c; --outcome-surface: var(--pink); }
 .late-outcome h3 { font-size: 1em; line-height: 1.22; margin-block-end: .55em; }
 .late-outcome p + p { margin-block-start: .45em; }
 .late-incident-answer {
@@ -545,7 +545,7 @@ export const lateStyles = `
   border-radius: 8px;
   background: var(--quiet);
 }
-.late-stop-rule { border-inline-start: 4px solid var(--focus); }
+.late-stop-rule { border-inline-start: 4px solid #98536c; background: var(--pink); }
 .late-stop-rule p + p { color: var(--muted); }
 .late-charter {
   margin-block-start: 12px;
@@ -747,7 +747,7 @@ export const lateStyles = `
 .late-evidence-final { gap: 8px; }
 .late-evidence-final .late-trace-evidence h3:not(:first-child) { margin-top: 8px; }
 
-@media (max-width: 1023px) {
+@media (max-width: 1023px) and (orientation: portrait), (max-width: 760px) {
   .late-scorecard, .late-evidence-scene { font-size: inherit; }
   .late-case-layout, .late-draft-layout, .late-scope, .late-outcomes, .late-evidence-grid,
   .late-pilot-roles, .late-handoff,
@@ -771,6 +771,11 @@ export const lateStyles = `
   }
   .late-trace-reference.late-trace-site::before { border-inline-start-style: dashed; }
   .late-live-cue .sticker { display: none; }
+}
+
+@media (min-width: 761px) and (max-height: 480px) and (orientation: landscape) {
+  .late-draft-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .late-final-context .late-outcomes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 600px) {
