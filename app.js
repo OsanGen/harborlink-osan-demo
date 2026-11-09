@@ -1,6 +1,6 @@
 import { lessonPages } from './lesson-data.js?v=7';
 import { earlyScenes, earlyStyles } from './scenes-early.js?v=7';
-import { lateScenes, lateStyles } from './scenes-late.js?v=5';
+import { lateScenes, lateStyles } from './scenes-late.js?v=8';
 
 const scenes = { ...earlyScenes, ...lateScenes };
 const PRESENTATION_SCALE = 2.5;
@@ -202,6 +202,44 @@ function fitLesson() {
   lesson.style.setProperty('--lesson-scale', best.scale);
 }
 
+function playPhase(active, animations, onFinish) {
+  const startTime = document.timeline.currentTime;
+  if (startTime !== null) animations.forEach(animation => { animation.startTime = startTime; });
+  active.animations = animations;
+  syncPlayback();
+  Promise.all(animations.map(animation => animation.finished)).then(() => {
+    if (presentation.active === active) onFinish();
+  }, () => {
+    // Canceling an interrupted reveal cancels its current phase.
+  });
+}
+
+function revealDestination(beat, active, timeScale) {
+  const exit = beat.exit ?? 0;
+  renderScene(beat.to, beat);
+  renderTakeaway(beat.to, true);
+  fitLesson();
+  const targets = Array.from(stage.querySelectorAll('[data-motion]'));
+  if (!takeaway.hidden) targets.push(takeaway);
+  const animations = beat.motion.flatMap(({ target, effect, delay = 0, duration }) =>
+    targets
+      .filter(node => node.dataset.motion.split(/\s+/).includes(target))
+      .map(node => node.animate(motionFrames(effect), {
+        delay: (delay - exit) * timeScale,
+        duration: duration * timeScale,
+        fill: 'both',
+        easing: ['line', 'fade', 'fade-out'].includes(effect) ? 'linear' : 'cubic-bezier(0.22, 1, 0.36, 1)',
+      })));
+  if (exit) {
+    animations.push(lesson.animate(motionFrames('fade'), {
+      duration: exit * timeScale,
+      fill: 'both',
+    }));
+  }
+  animations.push(stage.animate([], (beat.duration - exit) * timeScale));
+  playPhase(active, animations, () => commit(active.destinationStep, presentation.pageIndex, true));
+}
+
 function startBeat(beat) {
   const destinationStep = presentation.stepIndex + 1;
   if (reducedMotion()) {
@@ -209,33 +247,25 @@ function startBeat(beat) {
     return;
   }
 
-  renderScene(beat.to, beat);
-  renderTakeaway(beat.to, true);
-  fitLesson();
-  const targets = Array.from(stage.querySelectorAll('[data-motion]'));
-  if (!takeaway.hidden) targets.push(takeaway);
   const timeScale = Math.max(PRESENTATION_SCALE, MIN_REVEAL_MS / beat.duration);
-  const animations = beat.motion.flatMap(({ target, effect, delay = 0, duration }) =>
-    targets
-      .filter(node => node.dataset.motion.split(/\s+/).includes(target))
-      .map(node => node.animate(motionFrames(effect), {
-        delay: delay * timeScale,
-        duration: duration * timeScale,
-        fill: 'both',
-        easing: ['line', 'fade', 'fade-out'].includes(effect) ? 'linear' : 'cubic-bezier(0.22, 1, 0.36, 1)',
-      })));
-  animations.push(stage.animate([], beat.duration * timeScale));
-  const startTime = document.timeline.currentTime;
-  if (startTime !== null) animations.forEach(animation => { animation.startTime = startTime; });
-  const active = { destinationStep, animations };
+  const active = { destinationStep, animations: [] };
   presentation.active = active;
   renderTransport();
   announcement.textContent = `Revealing step ${destinationStep + 1} of ${lastStep() + 1}.`;
-  syncPlayback();
-  Promise.all(animations.map(animation => animation.finished)).then(() => {
-    if (presentation.active === active) commit(destinationStep, presentation.pageIndex, true);
-  }, () => {
-    // Canceling a superseded beat also cancels its clock.
+  if (!beat.exit) {
+    revealDestination(beat, active, timeScale);
+    return;
+  }
+
+  stage.setAttribute('aria-busy', 'true');
+  stage.firstElementChild.inert = true;
+  const outgoing = lesson.animate(motionFrames('fade-out'), {
+    duration: beat.exit * timeScale,
+    fill: 'both',
+  });
+  playPhase(active, [outgoing], () => {
+    outgoing.cancel();
+    revealDestination(beat, active, timeScale);
   });
 }
 

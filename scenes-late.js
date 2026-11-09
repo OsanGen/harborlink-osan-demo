@@ -33,11 +33,11 @@ function incidentScene(state, ui) {
         <section class="late-evidence">
           ${ui.part('incidentEvidenceHeading')}
           <div class="late-evidence-grid">
-            <div data-motion="first-policy">
+            <div class="late-policy-evidence" data-motion="first-policy">
               ${ui.asset('A005', 'late-policy-art', '')}
               ${ui.part('incidentEvidencePolicyA')}
             </div>
-            <div data-motion="second-policy">
+            <div class="late-policy-evidence" data-motion="second-policy">
               ${ui.asset('A005', 'late-policy-art', '')}
               ${ui.part('incidentEvidencePolicyB')}
             </div>
@@ -58,13 +58,13 @@ function incidentScene(state, ui) {
     case 'R4':
       return `<div class="late-stack">
         <div>${ui.part('incidentIdentity')}</div>
-        <div class="late-case-layout">
+        <div class="late-case-layout late-change-layout">
           <div>
             ${ui.part('incidentChangesHeading')}
             <div class="late-changes">
-              <div data-motion="change-1">${ui.part('incidentChange1')}</div>
-              <div data-motion="change-2">${ui.part('incidentChange2')}</div>
-              <div data-motion="change-3">${ui.part('incidentChange3')}</div>
+              <div class="late-change-pending" data-motion="change-1">${ui.part('incidentChange1')}</div>
+              <div class="late-change-confirmed" data-motion="change-2">${ui.part('incidentChange2')}</div>
+              <div class="late-change-pending" data-motion="change-3">${ui.part('incidentChange3')}</div>
             </div>
           </div>
           ${incidentReviewers(ui)}
@@ -131,21 +131,19 @@ function pilotScene(state, ui) {
     case 'R0':
       return `<div class="late-scope">
         ${calendarIllustration()}
-        <div>${ui.block(2)}${ui.block(3)}</div>
+        <div class="late-pilot-plan">
+          <section class="late-pilot-definition">${ui.block(2)}</section>
+          <section class="late-pilot-scope">${ui.block(3)}</section>
+        </div>
       </div>`;
     case 'R1':
-      return `<div class="late-pilot-measurement">
-        ${ui.entering?.from === 'R0'
-          ? `<div class="late-calendar-exit" data-motion="calendar-exit">${calendarIllustration()}</div>`
-          : ''}
-        <div class="late-stack" data-motion="kpi">
-          <div>${ui.block(4)}</div>
-          ${pilotScorecard(ui, false)}
-        </div>
+      return `<div class="late-stack" data-motion="kpi">
+        <section class="late-kpi-definition">${ui.block(4)}</section>
+        ${pilotScorecard(ui, false)}
       </div>`;
     case 'R2':
       return `<div class="late-stack">
-        <div>${ui.block(4)}</div>
+        <section class="late-kpi-definition">${ui.block(4)}</section>
         ${pilotScorecard(ui, true)}
       </div>`;
     case 'R3':
@@ -170,7 +168,7 @@ function familiarGroups(state, ui) {
     const label = labeled
       ? `<div class="late-artifact-copy" data-motion="artifact-label-${number}">${ui.part(`artifact${number}`)}</div>`
       : '';
-    return `<li class="late-recalled">
+    return `<li class="late-recalled"${labeled ? ` data-artifact="A0${number}"` : ''}>
       <div class="late-recalled-art"${labeled ? ` data-motion="recall-${number}"` : ''}>${art}</div>
       ${label}
     </li>`;
@@ -187,12 +185,26 @@ function familiarGroups(state, ui) {
   </div>`;
 }
 
+function connectedArtifactList(ui) {
+  return `<ol class="late-connected-list" role="list">${[1, 2, 3, 4].map(number =>
+    `<li data-artifact="A0${number}">${ui.part(`artifactTitle${number}`)}</li>`
+  ).join('')}</ol>`;
+}
+
 function emailPair(ui, includeArt) {
   const art = includeArt ? ui.asset('A005', 'late-policy-art', '') : '';
-  return `<div class="late-email-pair">
-    <div data-motion="email-draft" data-object="email-draft">${art}${ui.part('artifact5')}</div>
-    <div data-motion="email-revision" data-object="email-revision">${art}${ui.part('artifact6')}</div>
+  return `<div class="late-email-pair${includeArt ? ' late-email-pair-illustrated' : ''}">
+    <div data-artifact="A05" data-motion="email-draft" data-object="email-draft">${art}<div>${ui.part('artifact5')}</div></div>
+    <div data-artifact="A06" data-motion="email-revision" data-object="email-revision">${art}<div>${ui.part('artifact6')}</div></div>
   </div>`;
+}
+
+function savedRecommendation(ui, animated = false) {
+  return `<section class="late-recommendation" data-artifact="A06"${animated ? ' data-motion="recommendation"' : ''}>${ui.block(4)}</section>`;
+}
+
+function currentPair(ui) {
+  return `<section class="late-current-pair">${ui.part('handoffCurrentPair')}</section>`;
 }
 
 function intendedSiteGraphic() {
@@ -215,21 +227,21 @@ function handoffView(ui) {
           ${ui.part('handoffMatching')}
         </section>
         <div class="late-dashed-link" data-motion="site-link" aria-hidden="true"></div>
-        <section class="late-intended-site" data-motion="intended-site">
+        <section class="late-intended-site" data-artifact="site" data-motion="intended-site">
           ${intendedSiteGraphic()}
           ${ui.part('handoffIntendedSite')}
         </section>
       </div>
     </div>
-    <div class="late-trace-start">${ui.part('handoffCurrentPair')}</div>
+    ${currentPair(ui)}
   </div>`;
 }
 
 const traceDestinations = [
-  { state: 'R4A', label: 'A03', block: 9 },
-  { state: 'R4B', label: 'A04', block: 10 },
-  { state: 'R4C', label: 'A06', block: 11 },
-  { state: 'R4D', label: 'Intended review site', block: 12 },
+  { state: 'R4A', artifact: 'A03', block: 9 },
+  { state: 'R4B', artifact: 'A04', block: 10 },
+  { state: 'R4C', artifact: 'A06', block: 11 },
+  { state: 'R4D', artifact: 'site', label: 'Intended review site', block: 12 },
 ];
 
 function traceView(state, ui) {
@@ -239,19 +251,19 @@ function traceView(state, ui) {
     const outline = selected
       ? '<span class="late-trace-outline" data-motion="trace-outline" aria-hidden="true"></span>'
       : '';
-    const site = destination.state === 'R4D' ? ' late-trace-site' : '';
-    return `<li class="late-trace-reference${site}"${selected ? ' aria-current="step"' : ''}>
+    const site = destination.artifact === 'site';
+    return `<li class="late-trace-reference${site ? ' late-trace-site' : ''}" data-artifact="${destination.artifact}"${selected ? ' aria-current="step"' : ''}>
       ${outline}
-      ${destination.state === 'R4D' ? intendedSiteGraphic() : ''}
-      <span>${destination.label}</span>
+      ${site ? intendedSiteGraphic() : ''}
+      <span>${destination.label ?? destination.artifact}</span>
     </li>`;
   }).join('');
   return `<div class="late-stack">
     <ol class="late-trace-track">${references}</ol>
-    <div class="late-trace-detail" data-motion="trace-detail">${ui.block(current.block)}</div>
+    <section class="late-trace-detail" data-artifact="${current.artifact}" data-motion="trace-detail">${ui.block(current.block)}</section>
     <div class="late-trace-evidence">
-      <div>${ui.block(4)}</div>
-      <div>${ui.part('handoffCurrentPair')}</div>
+      ${savedRecommendation(ui)}
+      ${currentPair(ui)}
     </div>
   </div>`;
 }
@@ -266,9 +278,9 @@ function evidenceScene(state, ui) {
     case 'R2':
       detail = `<div class="late-stack">
         ${ui.part('connectedWorkHeading')}
-        ${ui.part('artifactNames1to4')}
+        ${connectedArtifactList(ui)}
         ${emailPair(ui, true)}
-        <div data-motion="recommendation">${ui.block(4)}</div>
+        ${savedRecommendation(ui, true)}
       </div>`;
       break;
     case 'R3':
@@ -288,8 +300,11 @@ function evidenceScene(state, ui) {
           <div>${ui.block(14)}</div>
         </div>
         <div class="late-trace-evidence">
-          <div>${ui.block(4)}${emailPair(ui, false)}</div>
-          <div>${ui.part('handoffCurrentPair')}${ui.block(12)}</div>
+          <div class="late-evidence-column">${savedRecommendation(ui)}${emailPair(ui, false)}</div>
+          <div class="late-evidence-column">
+            ${currentPair(ui)}
+            <section class="late-site-note" data-artifact="site">${ui.block(12)}</section>
+          </div>
         </div>
       </div>`;
       break;
@@ -337,28 +352,27 @@ export const lateScenes = {
     final: 'R4',
     render: pilotScene,
     beats: [
-      { from: 'R0', to: 'R1', duration: 600, motion: [
-        { target: 'calendar-exit', effect: 'fade-out', delay: 0, duration: 180 },
+      { from: 'R0', to: 'R1', duration: 600, exit: 180, motion: [
         { target: 'kpi', effect: 'fade', delay: 180, duration: 180 },
         { target: 'measure-1', effect: 'fade', delay: 180, duration: 300 },
         { target: 'measure-2', effect: 'fade', delay: 240, duration: 300 },
         { target: 'measure-3', effect: 'fade', delay: 300, duration: 300 },
       ] },
-      { from: 'R1', to: 'R2', duration: 450, motion: [
-        { target: 'measure-1', effect: 'focus', delay: 0, duration: 230 },
-        { target: 'definition-1', effect: 'fade', delay: 0, duration: 230 },
-        { target: 'measure-2', effect: 'focus', delay: 110, duration: 230 },
-        { target: 'definition-2', effect: 'fade', delay: 110, duration: 230 },
-        { target: 'measure-3', effect: 'focus', delay: 220, duration: 230 },
-        { target: 'definition-3', effect: 'fade', delay: 220, duration: 230 },
+      { from: 'R1', to: 'R2', duration: 450, exit: 100, motion: [
+        { target: 'measure-1', effect: 'focus', delay: 100, duration: 190 },
+        { target: 'definition-1', effect: 'fade', delay: 100, duration: 190 },
+        { target: 'measure-2', effect: 'focus', delay: 180, duration: 190 },
+        { target: 'definition-2', effect: 'fade', delay: 180, duration: 190 },
+        { target: 'measure-3', effect: 'focus', delay: 260, duration: 190 },
+        { target: 'definition-3', effect: 'fade', delay: 260, duration: 190 },
       ] },
-      { from: 'R2', to: 'R3', duration: 450, motion: [
-        { target: 'pilot-owner', effect: 'fade', delay: 0, duration: 320 },
-        { target: 'stop-rule', effect: 'fade', delay: 120, duration: 330 },
+      { from: 'R2', to: 'R3', duration: 450, exit: 100, motion: [
+        { target: 'pilot-owner', effect: 'fade', delay: 100, duration: 250 },
+        { target: 'stop-rule', effect: 'fade', delay: 180, duration: 270 },
       ] },
-      { from: 'R3', to: 'R4', duration: 220, motion: [
-        { target: 'scorecard', effect: 'fade', delay: 0, duration: 180 },
-        { target: 'charter', effect: 'fade', delay: 60, duration: 160 },
+      { from: 'R3', to: 'R4', duration: 220, exit: 50, motion: [
+        { target: 'scorecard', effect: 'fade', delay: 50, duration: 130 },
+        { target: 'charter', effect: 'fade', delay: 80, duration: 140 },
         { target: 'takeaway', effect: 'fade', delay: 100, duration: 120 },
       ] },
     ],
@@ -423,9 +437,13 @@ export const lateStyles = `
   gap: 30px;
   align-items: center;
 }
+.late-change-layout {
+  grid-template-columns: minmax(0, 1.8fr) minmax(260px, 1fr);
+  align-items: start;
+  gap: clamp(14px, 2vw, 30px);
+}
 .late-request-art { width: min(100%, 220px); justify-self: center; }
 .late-policy-art { width: 100px; }
-.late-reviewer-art { width: 94px; }
 .late-mini-art { width: 64px; }
 .late-incident-report, .late-evidence-note, .late-draft {
   min-width: 0;
@@ -438,10 +456,25 @@ export const lateStyles = `
 .late-evidence-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+  gap: clamp(10px, 1.5vw, 20px);
 }
-.late-evidence-grid > div { display: grid; justify-items: center; text-align: center; gap: 6px; align-content: start; }
-.late-evidence-grid .late-policy-art { height: clamp(80px, 9vw, 112px); }
+.late-evidence-grid > div {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  align-content: start;
+  gap: 6px;
+  padding: 10px clamp(10px, 1.2vw, 16px);
+  border-block-start: 3px solid var(--focus);
+  border-radius: 8px;
+  background: var(--blue);
+}
+.late-evidence-grid > .late-policy-evidence {
+  border-block-start-color: #956826;
+  background: var(--yellow);
+}
+.late-evidence-grid .late-policy-art { height: clamp(64px, 7vw, 96px); }
+.late-evidence-note { background: var(--blue); }
 .late-outcomes {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
@@ -469,14 +502,29 @@ export const lateStyles = `
 @media (min-width: 1024px) {
   .late-outcomes .late-outcome h3 { min-block-size: 2.44em; }
 }
-.late-reviewers, .late-run-handoff, .late-intended-site {
+.late-reviewers {
+  display: grid;
+  grid-template-columns: clamp(38px, 4.5vw, 64px) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: clamp(10px, 1.2vw, 16px);
+  border-inline-start: 4px solid #98536c;
+  border-radius: 8px;
+  background: var(--pink);
+}
+.late-reviewers .late-reviewer-art { width: 100%; }
+.late-reviewers p { overflow-wrap: normal; }
+.late-run-handoff, .late-intended-site {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.late-reviewers .sticker, .late-run-handoff .sticker { flex: none; }
-.late-changes { display: grid; gap: 4px; }
-.late-changes > div { border-inline-start: 3px solid var(--focus); padding: 8px 12px; }
+.late-run-handoff .sticker { flex: none; }
+.late-changes { display: grid; gap: 8px; }
+.late-changes > div { border-inline-start: 4px solid; border-radius: 6px; padding: 8px 12px; }
+.late-changes .late-change-pending { border-inline-start-color: #956826; background: var(--yellow); }
+.late-changes .late-change-confirmed { border-inline-start-color: #357768; background: var(--mint); }
 .late-draft-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
@@ -491,14 +539,28 @@ export const lateStyles = `
   border-inline-start: 4px solid var(--outcome-accent);
 }
 .late-final-context .late-outcome h3 { min-block-size: 0; }
-.late-incident-final .late-reviewer-art { width: 60px; }
+.late-incident-final .late-reviewers { grid-template-columns: clamp(36px, 4vw, 54px) minmax(0, 1fr); }
 .late-scope {
   display: grid;
   grid-template-columns: minmax(0, 26fr) minmax(0, 74fr);
   gap: clamp(20px, 4vw, 56px);
   align-items: center;
 }
-.late-scope h3:not(:first-child) { margin-top: 18px; }
+.late-pilot-plan { display: grid; min-width: 0; gap: 10px; }
+.late-pilot-definition, .late-pilot-scope, .late-kpi-definition {
+  min-width: 0;
+  padding: 10px 14px;
+  border-inline-start: 4px solid var(--focus);
+  border-radius: 8px;
+  background: var(--blue);
+}
+.late-pilot-scope { border-inline-start-color: #3f725e; background: var(--mint); }
+.late-pilot-scope p + p {
+  padding: 8px 10px;
+  border-inline-start: 3px solid #98536c;
+  border-radius: 4px;
+  background: var(--pink);
+}
 .late-calendar {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -509,10 +571,15 @@ export const lateStyles = `
   border-radius: 6px;
 }
 .late-calendar span { display: block; aspect-ratio: 1; border: 1px solid var(--focus); background: var(--mint); }
-.late-pilot-measurement { position: relative; }
-.late-calendar-exit { position: absolute; z-index: 2; top: 50%; width: min(26%, 320px); pointer-events: none; }
 .late-scorecard { font-size: max(22px, 0.93em); min-width: 0; }
-.late-scorecard > p:last-child { margin-top: 10px; font-weight: 650; color: var(--muted); }
+.late-scorecard > p:last-child {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 8px;
+  border-inline-start: 3px solid #956826;
+  background: var(--yellow);
+  font-weight: 650;
+}
 .late-table {
   margin-top: 10px;
   table-layout: fixed;
@@ -523,7 +590,7 @@ export const lateStyles = `
   overflow: hidden;
 }
 .late-table th, .late-table td { padding: .38em .65em; }
-.late-table thead th { background: var(--blue); }
+.late-table thead th { background: var(--quiet); }
 .late-table thead th:first-child { width: 46%; }
 .late-table-definitions thead th:first-child { width: 36%; }
 .late-table-definitions thead th:nth-child(2),
@@ -531,7 +598,18 @@ export const lateStyles = `
 .late-table tbody tr:nth-child(even) { background: var(--quiet); }
 .late-table tbody tr:last-child > :is(th, td) { border-block-end: 0; }
 .late-table tbody td { font-variant-numeric: tabular-nums; }
-.late-table .late-definition { border-inline-start: 1px solid var(--divider); }
+.late-table thead th:nth-child(2) { background: var(--blue); }
+.late-table thead th:nth-child(3) { background: var(--mint); }
+.late-table thead th:nth-child(4) { background: var(--yellow); }
+.late-table td:nth-child(2) { background: color-mix(in srgb, var(--blue) 54%, var(--canvas)); }
+.late-table td:nth-child(3) {
+  background: color-mix(in srgb, var(--mint) 54%, var(--canvas));
+  font-weight: 650;
+}
+.late-table .late-definition {
+  border-inline-start: 1px solid var(--divider);
+  background: color-mix(in srgb, var(--yellow) 54%, var(--canvas));
+}
 .late-cell-label { display: none; }
 .late-pilot-roles {
   display: grid;
@@ -554,7 +632,29 @@ export const lateStyles = `
 }
 .late-charter h3 { font-size: .9em; color: var(--muted); }
 .late-charter p { font-weight: 650; }
-.late-evidence-scene { font-size: max(22px, 0.93em); }
+.late-evidence-scene {
+  font-size: max(22px, 0.93em);
+  --artifact-surface: var(--quiet);
+  --artifact-accent: var(--focus);
+  --artifact-padding: 10px 12px;
+}
+.late-evidence-scene [data-artifact="A01"] { --artifact-surface: var(--blue); --artifact-accent: #235c7a; }
+.late-evidence-scene [data-artifact="A02"] { --artifact-surface: var(--mint); --artifact-accent: #286859; }
+.late-evidence-scene [data-artifact="A03"] { --artifact-surface: var(--pink); --artifact-accent: #8f4660; }
+.late-evidence-scene [data-artifact="A04"] { --artifact-surface: #eee6f8; --artifact-accent: #695584; }
+.late-evidence-scene [data-artifact="A05"] { --artifact-surface: var(--quiet); --artifact-accent: #5d6c7e; }
+.late-evidence-scene [data-artifact="A06"] { --artifact-surface: #f9e9df; --artifact-accent: #8c4e31; }
+.late-evidence-scene [data-artifact="site"] { --artifact-surface: #e8eff5; --artifact-accent: #4f697d; }
+.late-evidence-scene :where(.late-recalled[data-artifact], .late-connected-list > li, .late-email-pair > div,
+  .late-recommendation, .late-current-pair, .late-trace-detail, .late-site-note) {
+  min-width: 0;
+  padding: var(--artifact-padding);
+  border: 1px solid var(--divider);
+  border-inline-start: 4px solid var(--artifact-accent);
+  border-radius: 8px;
+  background: var(--artifact-surface);
+}
+.late-current-pair { --artifact-surface: var(--yellow); --artifact-accent: #956826; }
 .late-finding {
   position: relative;
   z-index: 2;
@@ -650,30 +750,44 @@ export const lateStyles = `
   border-width: 2px;
 }
 .late-familiar > .late-familiar-grid { margin-top: 12px; }
-.late-familiar > .late-familiar-grid .late-recalled-art { height: clamp(108px, 11vw, 148px); }
-.late-artifact-copy { padding-top: 10px; }
+.late-evidence-scene .late-familiar .late-recalled[data-artifact] {
+  padding: clamp(8px, 1vw, 14px);
+  border-inline-start: 1px solid var(--divider);
+  border-block-start: 3px solid var(--artifact-accent);
+}
+.late-familiar > .late-familiar-grid .late-recalled-art {
+  height: clamp(76px, 9vw, 112px);
+  padding: 0;
+  background: transparent;
+}
+.late-familiar > .late-familiar-grid .late-recall-art { height: min(100%, 90px); }
+.late-artifact-copy { padding-top: 6px; }
 .late-artifact-copy h4 { line-height: 1.22; margin-bottom: 4px; }
 .late-artifact-copy p { line-height: 1.38; }
 .late-board-plate .late-recall-art {
   height: min(100%, clamp(37px, 8vw, 96px));
 }
 .late-evidence-scene :is(ol, ul) { padding-inline-start: 1.35em; }
-.late-evidence-scene > .late-stack > ol:not(.late-trace-track) {
+.late-evidence-scene .late-connected-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 42px;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
 }
+.late-evidence-scene .late-connected-list > li { margin: 0; padding: 7px 10px; }
 .late-email-pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
-.late-email-pair > div {
-  border-block-start: 3px solid var(--focus);
-  padding: 8px 12px;
-  background: var(--quiet);
+.late-email-pair-illustrated > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
 }
-.late-email-pair .sticker { float: inline-start; margin-inline-end: 8px; width: 72px; }
+.late-email-pair .sticker { width: clamp(34px, 5vw, 58px); }
 .late-handoff {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
@@ -686,8 +800,8 @@ export const lateStyles = `
   padding: 10px 14px;
 }
 .late-work-output { background: var(--blue); }
-.late-run-handoff, .late-intended-site { background: var(--quiet); }
-.late-intended-site { border-style: dashed; }
+.late-run-handoff { background: var(--quiet); }
+.late-intended-site { background: var(--artifact-surface); border-style: dashed; }
 .late-handoff-pair { display: grid; }
 .late-site-graphic {
   display: grid;
@@ -702,7 +816,6 @@ export const lateStyles = `
 .late-site-graphic span { border: 1px solid var(--focus); }
 .late-site-graphic span:first-child { grid-column: 1 / -1; }
 .late-dashed-link { width: 0; height: 22px; border-inline-start: 3px dashed var(--focus); justify-self: center; }
-.late-trace-start { border-top: 1px solid var(--divider); padding-top: 12px; }
 .late-evidence-scene .late-trace-track {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -714,10 +827,12 @@ export const lateStyles = `
   position: relative;
   display: grid;
   align-items: center;
+  min-width: 0;
   padding: 8px 12px;
-  border: 2px solid var(--ink);
-  border-radius: 4px;
-  background: var(--quiet);
+  border: 1px solid var(--artifact-accent);
+  border-radius: 6px;
+  background: var(--artifact-surface);
+  font-weight: 650;
 }
 .late-trace-reference + .late-trace-reference { margin-top: 0; }
 .late-trace-reference + .late-trace-reference::before {
@@ -730,10 +845,11 @@ export const lateStyles = `
 }
 .late-trace-site, .late-trace-reference.late-trace-site::before { border-style: dashed; }
 .late-trace-site { display: flex; align-items: center; gap: 8px; }
-.late-trace-outline { position: absolute; inset: -3px; border: 4px solid var(--focus); border-radius: 6px; pointer-events: none; }
-.late-trace-detail { padding: 10px 12px; background: var(--blue); }
-.late-trace-evidence { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-.late-trace-evidence .late-email-pair { margin-top: 12px; }
+.late-trace-site .late-site-graphic { flex-basis: clamp(30px, 4vw, 46px); min-height: 32px; }
+.late-trace-site > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.late-trace-outline { position: absolute; inset: -2px; border: 3px solid var(--artifact-accent); border-radius: 8px; pointer-events: none; }
+.late-trace-evidence { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(10px, 1.5vw, 18px); }
+.late-evidence-column { display: grid; align-content: start; gap: 10px; min-width: 0; }
 .late-live-cue {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
@@ -745,17 +861,15 @@ export const lateStyles = `
 }
 .late-live-cue .sticker { width: 60px; }
 .late-evidence-final { gap: 8px; }
-.late-evidence-final .late-trace-evidence h3:not(:first-child) { margin-top: 8px; }
 
 @media (max-width: 1023px) and (orientation: portrait), (max-width: 760px) {
   .late-scorecard, .late-evidence-scene { font-size: inherit; }
   .late-case-layout, .late-draft-layout, .late-scope, .late-outcomes, .late-evidence-grid,
   .late-pilot-roles, .late-handoff,
   .late-trace-evidence, .late-live-cue, .late-email-pair, .late-evidence-scene .late-trace-track,
-  .late-evidence-scene > .late-stack > ol:not(.late-trace-track) { grid-template-columns: minmax(0, 1fr); }
+  .late-evidence-scene .late-connected-list { grid-template-columns: minmax(0, 1fr); }
   .late-case-layout { gap: 14px; }
   .late-request-art { width: 116px; }
-  .late-reviewer-art { width: 60px; }
   .late-evidence-grid > div { grid-template-columns: 66px minmax(0, 1fr); align-items: center; justify-items: start; text-align: start; }
   .late-evidence-grid .late-policy-art { width: 66px; height: 68px; }
   .late-scope .late-calendar { max-width: 320px; grid-row: 2; }
@@ -778,12 +892,21 @@ export const lateStyles = `
   .late-final-context .late-outcomes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-@media (max-width: 600px) {
-  .late-evidence-scene .late-familiar > .late-familiar-grid { grid-template-columns: minmax(0, 1fr); }
-  .late-familiar > .late-familiar-grid .late-recalled { display: grid; grid-template-columns: minmax(88px, 28%) minmax(0, 1fr); gap: 12px; }
-  .late-familiar > .late-familiar-grid .late-recalled-art { height: 78px; }
+@media (max-width: 900px) {
+  .late-evidence-scene .late-familiar > .late-familiar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .late-familiar > .late-familiar-grid .late-recalled { display: grid; grid-template-columns: minmax(70px, 25%) minmax(0, 1fr); gap: 10px; align-items: start; }
+  .late-familiar > .late-familiar-grid .late-recalled-art { height: 66px; }
   .late-familiar > .late-familiar-grid .late-recall-art { height: 58px; }
   .late-artifact-copy { padding-top: 0; }
+}
+
+@media (max-width: 600px) {
+  .late-evidence-scene { --artifact-padding: 7px 10px; }
+  .late-evidence-scene .late-familiar > .late-familiar-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .late-familiar > .late-familiar-grid .late-recalled-art { height: 58px; }
+  .late-evidence-scene .late-trace-track { gap: 12px; }
+  .late-trace-reference + .late-trace-reference::before { height: 10px; top: -12px; }
+  .late-evidence-column { gap: 8px; }
 }
 
 @media (max-width: 680px) {
@@ -800,11 +923,12 @@ export const lateStyles = `
   .late-table tbody tr {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px 6px;
     padding: 10px 12px;
     border: 1px solid var(--divider);
     border-radius: 8px;
   }
-  .late-table tbody :is(th, td) { display: block; padding: 3px; border: 0; }
+  .late-table tbody :is(th, td) { display: block; padding: 3px 5px; border: 0; border-radius: 4px; }
   .late-table tbody :is(th, .late-definition) { grid-column: 1 / -1; }
   .late-table .late-definition { border-top: 1px solid var(--divider); border-inline-start: 0; margin-top: 4px; padding-top: 6px; }
   .late-cell-label { display: block; font-weight: 650; font-size: 0.9em; }
