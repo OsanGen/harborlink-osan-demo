@@ -1,8 +1,9 @@
-import { lessonPages } from './lesson-data.js';
-import { earlyScenes, earlyStyles } from './scenes-early.js';
-import { lateScenes, lateStyles } from './scenes-late.js';
+import { lessonPages } from './lesson-data.js?v=2';
+import { earlyScenes, earlyStyles } from './scenes-early.js?v=2';
+import { lateScenes, lateStyles } from './scenes-late.js?v=2';
 
 const scenes = { ...earlyScenes, ...lateScenes };
+const pageStates = lessonPages.map(({ id }) => ['R0', ...scenes[id].beats.map(beat => beat.to)]);
 const stickers = {
   A001: ['A001_planning_board.png', 881, 647, 50],
   A002: ['A002_request_slip.png', 630, 721, 50],
@@ -17,15 +18,16 @@ sceneStyles.textContent = earlyStyles + lateStyles;
 document.head.append(sceneStyles);
 
 const element = id => document.getElementById(id);
+const content = element('presentation-content');
 const title = element('page-title');
 const context = element('page-context');
 const workflow = element('workflow-context');
 const stage = element('scene-stage');
 const takeaway = element('takeaway');
 const previous = element('previous');
-const play = element('play');
 const next = element('next');
 const options = element('options');
+const optionsToggle = options.querySelector('summary');
 const indicator = element('page-indicator');
 const announcement = element('announcement');
 const motionControl = element('reduced-motion');
@@ -36,7 +38,7 @@ const systemMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 const presentation = {
   pageIndex: 0,
-  states: lessonPages.map(() => 'R0'),
+  stepIndex: 0,
   active: null,
   panelOpener: null,
   motionOverride: null,
@@ -44,7 +46,8 @@ const presentation = {
 
 const page = () => lessonPages[presentation.pageIndex];
 const scene = () => scenes[page().id];
-const state = () => presentation.states[presentation.pageIndex];
+const lastStep = () => pageStates[presentation.pageIndex].length - 1;
+const state = () => pageStates[presentation.pageIndex][presentation.stepIndex];
 const reducedMotion = () => presentation.motionOverride ?? systemMotion.matches;
 
 function block(id) {
@@ -63,10 +66,6 @@ function asset(id, className = '', alt = '') {
     <img src="./${path}" width="${width}" height="${height}" alt="${escapeAttribute(alt)}" draggable="false">
     <span class="sticker-fallback" aria-hidden="true"></span>
   </span>`;
-}
-
-function nextBeat() {
-  return scene().beats.find(beat => beat.from === state());
 }
 
 function renderScene(destination, entering = null) {
@@ -88,17 +87,11 @@ function renderScene(destination, entering = null) {
 
 function renderTransport() {
   const active = presentation.active;
-  const beat = nextBeat();
-  const namedGate = Boolean(beat?.trigger);
-  previous.disabled = presentation.pageIndex === 0;
-  next.disabled = presentation.pageIndex === lessonPages.length - 1;
-  play.disabled = !active && (!beat || namedGate);
-  if (active) {
-    play.textContent = active.paused ? 'Play' : 'Pause';
-  } else {
-    play.textContent = state() === 'R0' ? 'Play' : 'Continue';
-  }
-  indicator.textContent = `Page ${presentation.pageIndex + 1} of ${lessonPages.length}`;
+  previous.disabled = !active && presentation.pageIndex === 0 && presentation.stepIndex === 0;
+  next.disabled = presentation.pageIndex === lessonPages.length - 1 && presentation.stepIndex === lastStep();
+  next.setAttribute('aria-disabled', String(Boolean(active) || next.disabled));
+  indicator.textContent = `Page ${presentation.pageIndex + 1} of ${lessonPages.length} · ` +
+    `Step ${presentation.stepIndex + 1} of ${lastStep() + 1}`;
 }
 
 function renderCommitted() {
@@ -118,31 +111,21 @@ function renderTakeaway(destination, entering = false) {
   takeaway.innerHTML = takeaway.hidden ? '' : block(page().takeaway);
 }
 
-function announceState() {
-  const positions = ['R0', ...scene().beats.map(beat => beat.to)];
-  const position = positions.indexOf(state()) + 1;
-  const gate = stage.querySelector('[data-action="introduce"], [data-action="trace"]');
-  announcement.textContent = `Page ${presentation.pageIndex + 1} of ${lessonPages.length}. ` +
-    `Step ${position} of ${positions.length}.` +
-    (nextBeat()?.trigger && gate ? ` ${gate.textContent.trim()} to continue.` : '');
-}
-
 function stopBeat() {
   const active = presentation.active;
   presentation.active = null;
   active?.animations.forEach(animation => animation.cancel());
 }
 
-function commit(destination) {
-  const focusedTransport = document.activeElement === play;
+function commit(stepIndex, pageIndex = presentation.pageIndex) {
+  const focused = document.activeElement;
   stopBeat();
-  presentation.states[presentation.pageIndex] = destination;
+  presentation.pageIndex = pageIndex;
+  presentation.stepIndex = stepIndex;
   renderCommitted();
-  announceState();
-  if (focusedTransport && play.disabled) {
-    (stage.querySelector('[data-action="introduce"], [data-action="trace"]') ?? title)
-      .focus({ preventScroll: true });
-  }
+  announcement.textContent = indicator.textContent;
+  if (focused === previous && previous.disabled) next.focus({ preventScroll: true });
+  if (focused === next && next.disabled) previous.focus({ preventScroll: true });
 }
 
 function matchingPositions() {
@@ -154,6 +137,8 @@ function motionFrames(node, effect, positions) {
   switch (effect) {
     case 'lift':
       return [{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-32%)', opacity: 0 }];
+    case 'fade-out':
+      return [{ opacity: 1 }, { opacity: 0 }];
     case 'focus':
       return [{ boxShadow: '0 0 0 0 transparent' }, { boxShadow: '0 0 0 3px #235c7a' }];
     case 'line':
@@ -179,12 +164,10 @@ function motionFrames(node, effect, positions) {
   }
 }
 
-function startBeat(beat, opener = null) {
-  if (!beat || presentation.active) return;
-  const shouldFocus = opener === document.activeElement;
+function startBeat(beat) {
+  const destinationStep = presentation.stepIndex + 1;
   if (reducedMotion()) {
-    commit(beat.to);
-    if (shouldFocus) (play.disabled ? title : play).focus({ preventScroll: true });
+    commit(destinationStep);
     return;
   }
 
@@ -200,102 +183,74 @@ function startBeat(beat, opener = null) {
         delay,
         duration,
         fill: 'both',
-        easing: ['line', 'fade'].includes(effect) ? 'linear' : 'cubic-bezier(0.22, 1, 0.36, 1)',
+        easing: ['line', 'fade', 'fade-out'].includes(effect) ? 'linear' : 'cubic-bezier(0.22, 1, 0.36, 1)',
       })));
   const clock = stage.animate([], beat.duration);
-  const active = { beat, animations: [...animations, clock], paused: false };
+  const active = { destinationStep, animations: [...animations, clock] };
   presentation.active = active;
   renderTransport();
-  if (shouldFocus) play.focus({ preventScroll: true });
   clock.finished.then(() => {
-    if (presentation.active === active) commit(beat.to);
+    if (presentation.active === active) commit(destinationStep);
   }, () => {
     // Canceling a superseded beat also cancels its clock.
   });
 }
 
-function pauseBeat() {
-  const active = presentation.active;
-  if (!active || active.paused) return;
-  active.animations.forEach(animation => animation.pause());
-  active.paused = true;
-  renderTransport();
-}
-
-function useTransport() {
-  const active = presentation.active;
-  if (active?.paused) {
-    active.animations.forEach(animation => animation.play());
-    active.paused = false;
-    renderTransport();
-  } else if (active) {
-    pauseBeat();
-  } else {
-    const beat = nextBeat();
-    if (beat && !beat.trigger) startBeat(beat);
-  }
-}
-
-function navigate(offset) {
-  const destination = presentation.pageIndex + offset;
-  if (destination < 0 || destination >= lessonPages.length) return;
-  const focused = document.activeElement;
-  stopBeat();
-  presentation.pageIndex = destination;
+function prepareNavigation() {
   options.open = false;
-  renderCommitted();
-  announceState();
-  if ((focused === previous && !previous.disabled) || (focused === next && !next.disabled)) {
-    title.scrollIntoView({ block: 'start' });
+  content.scrollTop = 0;
+}
+
+function goForward(event) {
+  if (event.detail > 1 || presentation.active || next.disabled) return;
+  prepareNavigation();
+  const beat = scene().beats[presentation.stepIndex];
+  if (beat) startBeat(beat);
+  else commit(0, presentation.pageIndex + 1);
+}
+
+function goBack(event) {
+  if (event.detail > 1 || previous.disabled) return;
+  prepareNavigation();
+  if (presentation.active) {
+    commit(presentation.stepIndex);
+  } else if (presentation.stepIndex > 0) {
+    commit(presentation.stepIndex - 1);
   } else {
-    title.focus();
+    const previousPage = presentation.pageIndex - 1;
+    commit(pageStates[previousPage].length - 1, previousPage);
   }
 }
 
 function resetDemo() {
-  stopBeat();
-  if (panel.open) panel.close();
-  presentation.panelOpener = null;
-  presentation.pageIndex = 0;
-  presentation.states.fill('R0');
-  options.open = false;
-  renderCommitted();
-  announceState();
+  prepareNavigation();
+  commit(0, 0);
   title.focus();
 }
 
 function syncMotionPreference() {
   motionControl.checked = reducedMotion();
-  if (motionControl.checked && presentation.active) commit(presentation.active.beat.to);
+  if (motionControl.checked && presentation.active) commit(presentation.active.destinationStep);
 }
 
 function openPanel(kind, opener) {
   if (panel.open) return;
-  pauseBeat();
+  if (presentation.active) commit(presentation.active.destinationStep);
   const pages = {
     full: ['Show full page', page().audience],
     notes: ['Presenter notes', page().notes],
-    draft: ['Read the prepared draft', ['S004-C15']],
   };
   const [label, ids] = pages[kind];
   presentation.panelOpener = opener;
   panelTitle.textContent = label;
   panelContent.innerHTML = ids.map(block).join('');
-  if (kind === 'draft') {
-    const qualification = panelContent.firstElementChild;
-    panelTitle.textContent = qualification.textContent;
-    qualification.remove();
-  }
   panel.showModal();
   panel.scrollTop = 0;
   panelTitle.focus({ preventScroll: true });
 }
 
-previous.addEventListener('click', () => navigate(-1));
-next.addEventListener('click', () => navigate(1));
-play.addEventListener('click', event => {
-  if (event.detail < 2) useTransport();
-});
+previous.addEventListener('click', goBack);
+next.addEventListener('click', goForward);
 motionControl.addEventListener('change', () => {
   presentation.motionOverride = motionControl.checked;
   syncMotionPreference();
@@ -303,6 +258,7 @@ motionControl.addEventListener('change', () => {
 systemMotion.addEventListener('change', syncMotionPreference);
 element('close-panel').addEventListener('click', () => panel.close());
 panel.addEventListener('close', () => {
+  if (panel.open) return;
   const opener = presentation.panelOpener;
   presentation.panelOpener = null;
   panelContent.replaceChildren();
@@ -313,19 +269,13 @@ stage.addEventListener('error', event => {
   if (event.target instanceof HTMLImageElement) event.target.closest('.sticker')?.classList.add('is-missing');
 }, true);
 
-stage.addEventListener('toggle', event => {
-  if (event.target.matches('details[data-reading-disclosure][open]')) pauseBeat();
-}, true);
-
 document.addEventListener('keydown', event => {
   if (event.repeat && ['Enter', ' '].includes(event.key) && event.target.closest('button')) {
     event.preventDefault();
   }
-  if (event.key !== 'Escape' || panel.open) return;
-  const disclosure = event.target.closest('details[data-reading-disclosure][open]');
-  if (disclosure) {
-    disclosure.open = false;
-    disclosure.querySelector('summary').focus();
+  if (event.key === 'Escape' && !panel.open && options.open) {
+    options.open = false;
+    optionsToggle.focus();
   }
 });
 
@@ -334,27 +284,17 @@ document.addEventListener('click', event => {
   if (!button || !button.isConnected || event.detail > 1) return;
   const { action } = button.dataset;
   switch (action) {
-    case 'introduce':
-    case 'trace': {
-      const beat = nextBeat();
-      if (beat?.trigger === action) startBeat(beat, button);
-      else if (action === 'trace' && ['R4D', 'R5'].includes(state())) {
-        startBeat(scene().beats.find(item => item.trigger === 'trace'), button);
-      }
-      break;
-    }
     case 'replay':
-      commit('R0');
+    case 'final':
+      prepareNavigation();
+      commit(action === 'replay' ? 0 : lastStep());
+      optionsToggle.focus();
       break;
     case 'reset':
       resetDemo();
       break;
-    case 'final':
-      commit(scene().final);
-      break;
     case 'full':
     case 'notes':
-    case 'draft':
       openPanel(action, button);
       break;
   }

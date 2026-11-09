@@ -1,11 +1,3 @@
-function incidentRecord(ui) {
-  return `<details class="late-record" data-reading-disclosure>
-    <summary>${ui.part('incidentReportTitle')}</summary>
-    ${ui.part('incidentReportBody')}
-    ${ui.block(14)}
-  </details>`;
-}
-
 function incidentOutcomes(ui, showDocument = false) {
   const document = showDocument
     ? `<span data-motion="allowed-document">${ui.asset('A005', 'late-outcome-art', '')}</span>`
@@ -36,13 +28,15 @@ function incidentReviewers(ui) {
 function incidentScene(state, ui) {
   switch (state) {
     case 'R0':
-      return `<div class="late-incident-gate">
-        <div>${ui.part('incidentIdentity')}${ui.block(10)}</div>
-        <button type="button" data-action="introduce">${ui.part('incidentIntroduceLabel')}</button>
+      return `<div class="late-incident-intro late-identity-question">
+        ${ui.part('incidentIdentity')}${ui.block(10)}
       </div>`;
     case 'R1':
       return `<div class="late-case-layout" data-motion="incident">
-        <div>${ui.block(2)}${ui.block(10)}${incidentRecord(ui)}</div>
+        <div>
+          ${ui.block(2)}${ui.block(10)}
+          <section class="late-incident-report">${ui.block(13)}</section>
+        </div>
         ${ui.asset('A002', 'late-request-art', '')}
       </div>`;
     case 'R2':
@@ -65,14 +59,13 @@ function incidentScene(state, ui) {
             </div>
           </div>
         </section>
-        ${incidentRecord(ui)}
+        <section class="late-evidence-note" data-motion="evidence-note">${ui.block(14)}</section>
       </div>`;
     case 'R3':
       return `<div class="late-stack">
         <div>${ui.part('incidentIdentity')}</div>
         ${incidentOutcomes(ui, true)}
         <div data-motion="answer">${ui.block(11)}</div>
-        ${incidentRecord(ui)}
       </div>`;
     case 'R4':
       return `<div class="late-stack">
@@ -88,17 +81,17 @@ function incidentScene(state, ui) {
           </div>
           ${incidentReviewers(ui)}
         </div>
-        ${incidentRecord(ui)}
       </div>`;
     case 'R5':
       return `<div class="late-stack late-incident-final">
         <div>${ui.part('incidentIdentity')}</div>
-        ${incidentOutcomes(ui)}
-        <div class="late-draft" data-motion="draft">
-          ${incidentReviewers(ui)}
-          <button type="button" data-action="draft">${ui.part('incidentDraftLabel')}</button>
+        <div class="late-draft-layout">
+          <section class="late-draft" data-motion="draft">${ui.block(15)}</section>
+          <div class="late-final-context">
+            ${incidentReviewers(ui)}
+            ${incidentOutcomes(ui)}
+          </div>
         </div>
-        ${incidentRecord(ui)}
       </div>`;
   }
 }
@@ -183,37 +176,31 @@ function pilotScene(state, ui) {
 }
 
 function familiarGroups(state, ui) {
-  const labeled = state === 'R1';
-  const cover = !labeled || ui.entering?.from === 'R0'
-    ? '<div class="late-blueprint" data-motion="blueprint" aria-hidden="true"></div>'
-    : '';
   const objects = [
     ui.asset('A005', 'late-recall-art', ''),
     ui.asset('A003', 'late-recall-art', '') + ui.asset('A006', 'late-recall-art', ''),
     ui.asset('A005', 'late-recall-art', '') + ui.asset('A005', 'late-recall-art', ''),
     calendarIllustration() + ui.asset('A005', 'late-recall-art', ''),
   ];
-  const groups = objects.map((art, index) => {
+  const grid = labeled => `<ol class="late-familiar-grid" role="list">${objects.map((art, index) => {
     const number = index + 1;
     const label = labeled
-      ? `<div data-motion="artifact-label-${number}">
-          <div class="late-artifact-desktop">${ui.part(`artifact${number}`)}</div>
-          <details class="late-artifact-mobile" name="connected-work-artifact"${number === 1 ? ' open' : ''}>
-            <summary>${ui.part(`artifactTitle${number}`)}</summary>
-            <p>${ui.part(`artifactDescription${number}`)}</p>
-          </details>
-        </div>`
+      ? `<div class="late-artifact-copy" data-motion="artifact-label-${number}">${ui.part(`artifact${number}`)}</div>`
       : '';
-    return `<li class="late-recalled" data-motion="recall-${number}" data-object="recall-${number}">
-      <div class="late-recalled-art">${art}</div>
+    return `<li class="late-recalled">
+      <div class="late-recalled-art"${labeled ? ` data-motion="recall-${number}"` : ''}>${art}</div>
       ${label}
     </li>`;
-  }).join('');
-  return `<div class="late-familiar ${labeled ? 'late-familiar-labeled' : ''}">
-    ${ui.asset('A001', 'late-board-art', '')}
-    ${labeled ? ui.part('connectedWorkHeading') : ''}
-    <ol class="late-familiar-grid" role="list">${groups}</ol>
-    ${cover}
+  }).join('')}</ol>`;
+  const board = exiting => `<div class="late-board-plate${exiting ? ' late-board-exit' : ''}"${exiting ? ' data-motion="blueprint" aria-hidden="true"' : ''}>
+    <div class="late-board-surface" aria-hidden="true">${ui.asset('A001', 'late-board-art', '')}</div>
+    ${grid(false)}
+  </div>`;
+  if (state === 'R0') return board(false);
+  return `<div class="late-familiar">
+    ${ui.entering?.from === 'R0' ? board(true) : ''}
+    <div class="late-connected-heading" data-motion="connected-heading">${ui.part('connectedWorkHeading')}</div>
+    ${grid(true)}
   </div>`;
 }
 
@@ -223,10 +210,6 @@ function emailPair(ui, includeArt) {
     <div data-motion="email-draft" data-object="email-draft">${art}${ui.part('artifact5')}</div>
     <div data-motion="email-revision" data-object="email-revision">${art}${ui.part('artifact6')}</div>
   </div>`;
-}
-
-function traceButton(ui) {
-  return `<button type="button" data-action="trace">${ui.part('traceLabel')}</button>`;
 }
 
 function intendedSiteGraphic() {
@@ -255,10 +238,7 @@ function handoffView(ui) {
         </section>
       </div>
     </div>
-    <div class="late-trace-start">
-      <div>${ui.part('handoffCurrentPair')}</div>
-      ${traceButton(ui)}
-    </div>
+    <div class="late-trace-start">${ui.part('handoffCurrentPair')}</div>
   </div>`;
 }
 
@@ -290,7 +270,6 @@ function traceView(state, ui) {
       <div>${ui.block(4)}</div>
       <div>${ui.part('handoffCurrentPair')}</div>
     </div>
-    ${state === 'R4D' ? traceButton(ui) : ''}
   </div>`;
 }
 
@@ -327,7 +306,7 @@ function evidenceScene(state, ui) {
         </div>
         <div class="late-trace-evidence">
           <div>${ui.block(4)}${emailPair(ui, false)}</div>
-          <div>${ui.part('handoffCurrentPair')}${ui.block(12)}${traceButton(ui)}</div>
+          <div>${ui.part('handoffCurrentPair')}${ui.block(12)}</div>
         </div>
       </div>`;
       break;
@@ -343,13 +322,14 @@ export const lateScenes = {
     final: 'R5',
     render: incidentScene,
     beats: [
-      { from: 'R0', to: 'R1', duration: 450, trigger: 'introduce', motion: [
+      { from: 'R0', to: 'R1', duration: 450, motion: [
         { target: 'incident', effect: 'fade', delay: 0, duration: 450 },
       ] },
       { from: 'R1', to: 'R2', duration: 550, motion: [
         { target: 'first-policy', effect: 'slide-right', delay: 0, duration: 550 },
         { target: 'second-policy', effect: 'slide-left', delay: 0, duration: 550 },
         { target: 'billing-evidence', effect: 'fade', delay: 0, duration: 550 },
+        { target: 'evidence-note', effect: 'fade', delay: 200, duration: 350 },
       ] },
       { from: 'R2', to: 'R3', duration: 550, motion: [
         { target: 'outcomes', effect: 'fade', delay: 0, duration: 250 },
@@ -401,13 +381,14 @@ export const lateScenes = {
     render: evidenceScene,
     beats: [
       { from: 'R0', to: 'R1', duration: 1200, motion: [
-        { target: 'blueprint', effect: 'lift', delay: 0, duration: 450 },
+        { target: 'blueprint', effect: 'fade-out', delay: 0, duration: 450 },
         ...[1, 2, 3, 4].map((number) => ({
-          target: `recall-${number}`, effect: 'move', delay: 450, duration: 500,
+          target: `recall-${number}`, effect: 'rise', delay: 450 + (number - 1) * 55, duration: 335,
         })),
         ...[1, 2, 3, 4].map((number) => ({
           target: `artifact-label-${number}`, effect: 'fade', delay: 950, duration: 250,
         })),
+        { target: 'connected-heading', effect: 'fade', delay: 950, duration: 250 },
       ] },
       { from: 'R1', to: 'R2', duration: 650, motion: [
         { target: 'email-draft', effect: 'slide-left', delay: 0, duration: 500 },
@@ -420,7 +401,7 @@ export const lateScenes = {
         { target: 'intended-site', effect: 'fade', delay: 450, duration: 350 },
         { target: 'site-link', effect: 'line', delay: 450, duration: 350 },
       ] },
-      { from: 'R3', to: 'R4A', duration: 400, trigger: 'trace', motion: [
+      { from: 'R3', to: 'R4A', duration: 400, motion: [
         { target: 'trace-outline', effect: 'move', delay: 0, duration: 400 },
         { target: 'trace-detail', effect: 'fade', delay: 125, duration: 275 },
       ] },
@@ -440,18 +421,13 @@ export const lateScenes = {
 
 export const lateStyles = `
 .late-stack { display: grid; gap: 16px; min-width: 0; }
-.late-incident-gate {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 24px;
+.late-incident-intro {
   background: var(--quiet);
   padding: clamp(20px, 4vw, 48px);
   border: 2px solid var(--divider);
   border-radius: 12px;
 }
-.late-incident-gate > div, .late-identity-question { display: grid; gap: 6px; }
-.late-incident-gate > div h3:not(:first-child),
+.late-identity-question { display: grid; gap: 6px; }
 .late-identity-question h3:not(:first-child),
 .late-case-layout > div h3:not(:first-child) { margin-top: 12px; }
 .late-case-layout {
@@ -464,9 +440,14 @@ export const lateStyles = `
 .late-policy-art { width: 100px; }
 .late-reviewer-art { width: 94px; }
 .late-mini-art { width: 64px; }
-.late-record { border-top: 1px solid var(--divider); }
-.late-record blockquote { margin: 6px 8px 16px; }
-.late-record > :is(h3, p) { margin-inline: 8px; }
+.late-incident-report, .late-evidence-note, .late-draft {
+  min-width: 0;
+  padding: 16px clamp(14px, 2vw, 24px);
+  border-inline-start: 4px solid var(--focus);
+  background: var(--quiet);
+}
+.late-incident-report { margin-top: 16px; }
+.late-incident-report blockquote { margin: 6px 0 0; border: 0; padding: 0; }
 .late-evidence-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -498,14 +479,23 @@ export const lateStyles = `
 .late-reviewers .sticker, .late-charter .sticker, .late-run-handoff .sticker { flex: none; }
 .late-changes { display: grid; gap: 4px; }
 .late-changes > div { border-inline-start: 3px solid var(--focus); padding: 8px 12px; }
-.late-draft, .late-trace-start {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
+.late-draft-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(16px, 3vw, 36px);
 }
-.late-draft button, .late-trace-start button { flex: none; }
-.late-incident-final { gap: 10px; }
+.late-final-context { display: grid; gap: 12px; min-width: 0; }
+.late-final-context .late-outcomes { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.late-final-context .late-outcome { padding: 10px 12px; border-top: 1px solid var(--divider); }
+.late-final-context .late-evidence-boundary { border-inline-end: 0; }
+.late-final-context .late-authority-boundary {
+  border: 1px solid var(--divider);
+  border-inline-start: 3px solid var(--ink);
+  border-radius: 0;
+}
+.late-final-context :is(.late-allowed-track, .late-line) { display: none; }
+.late-final-context .late-outcome h3 { font-size: 1em; }
 .late-incident-final .late-reviewer-art { width: 60px; }
 .late-scope {
   display: grid;
@@ -551,52 +541,99 @@ export const lateStyles = `
   padding: 12px 16px;
   border-inline-start: 4px solid var(--ink);
 }
-.late-familiar {
+.late-board-plate {
+  /* The plate crops the PNG's transparent margin and aligns the cover to its visible interior. */
+  --board-interior: 10.2% 12.9% 14.3% 7.3%;
   position: relative;
-  isolation: isolate;
-  min-height: 310px;
-  padding: 24px clamp(10px, 3vw, 48px);
+  width: min(100%, clamp(390px, 145.6dvh - 610px, 660px));
+  aspect-ratio: 747 / 513;
+  margin-inline: auto;
+}
+.late-board-surface {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  pointer-events: none;
 }
 .late-board-art {
   position: absolute;
-  z-index: -1;
-  width: min(88%, 500px);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  width: 117.94%;
+  max-width: none;
+  top: -13.06%;
+  left: -8.97%;
+}
+.late-board-surface::after {
+  position: absolute;
+  inset: var(--board-interior);
+  content: "";
+  border-radius: 5px;
+  background:
+    linear-gradient(90deg, rgb(35 92 122 / 10%) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(rgb(35 92 122 / 10%) 1px, transparent 1px) 0 0 / 24px 24px,
+    var(--blue);
+}
+.late-board-exit {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  pointer-events: none;
+}
+.late-familiar { position: relative; isolation: isolate; }
+.late-connected-heading { position: relative; }
+.late-connected-heading h3 { margin-bottom: 0; }
+.late-recalled { min-width: 0; }
+.late-recalled + .late-recalled { margin-top: 0; }
+.late-recalled-art {
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(3px, .7vw, 10px);
+  padding: 6px;
+  border-radius: 8px;
+  background: var(--quiet);
 }
 .late-evidence-scene .late-familiar-grid {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(10px, 2vw, 28px);
-  margin-top: 14px;
+  gap: clamp(10px, 1.6vw, 24px);
   padding: 0;
   list-style: none;
 }
-.late-familiar:not(.late-familiar-labeled) .late-familiar-grid { margin: 44px auto 0; max-width: 410px; gap: 10px; }
-.late-recalled { min-width: 0; }
-.late-recalled + .late-recalled { margin-top: 0; }
-.late-artifact-mobile { display: none; }
-.late-recalled-art { display: flex; justify-content: center; align-items: center; gap: 2px; min-height: 106px; }
-.late-recall-art { width: min(44%, 92px); }
-.late-recalled-art .late-calendar { flex: 1; max-width: 132px; }
-.late-familiar-labeled .late-recalled { border-block-start: 2px solid var(--focus); padding-block-start: 6px; }
-.late-familiar-labeled .late-recalled-art { height: 140px; }
-.late-familiar-labeled .late-recalled > :last-child { background: var(--canvas); }
-.late-familiar-labeled .late-board-art { opacity: 0.16; }
-.late-blueprint {
+.late-evidence-scene .late-board-plate > .late-familiar-grid {
   position: absolute;
-  z-index: 1;
-  width: min(82%, 420px);
-  min-height: 134px;
-  inset-block-start: 50px;
-  inset-inline-start: 50%;
-  margin-inline-start: max(-41%, -210px);
-  border: 3px solid var(--focus);
-  border-radius: 6px;
-  opacity: 0.75;
-  background: repeating-linear-gradient(0deg, transparent 0 25px, var(--blue) 25px 27px);
-  pointer-events: none;
+  inset: var(--board-interior);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: clamp(6px, 1vw, 14px);
+  padding: clamp(8px, 1.4vw, 20px);
+}
+.late-board-plate .late-recalled { min-height: 0; }
+.late-board-plate .late-recalled-art {
+  height: 100%;
+  min-height: 0;
+  background: var(--canvas);
+}
+.late-recall-art {
+  flex: none;
+  width: min(43%, 82px);
+  height: clamp(37px, 7.8vw, 106px);
+}
+.late-recalled-art .late-calendar {
+  flex: 0 1 108px;
+  min-width: 0;
+  gap: 2px;
+  padding: 4px;
+  border-width: 2px;
+}
+.late-familiar > .late-familiar-grid { margin-top: 12px; }
+.late-familiar > .late-familiar-grid .late-recalled-art { height: clamp(108px, 11vw, 148px); }
+.late-artifact-copy { padding-top: 10px; }
+.late-artifact-copy h4 { line-height: 1.22; margin-bottom: 4px; }
+.late-artifact-copy p { line-height: 1.38; }
+.late-board-plate .late-recall-art {
+  height: min(100%, clamp(37px, 8vw, 96px));
 }
 .late-evidence-scene :is(ol, ul) { padding-inline-start: 1.35em; }
 .late-evidence-scene > .late-stack > ol:not(.late-trace-track) {
@@ -685,35 +722,23 @@ export const lateStyles = `
   background: var(--blue);
 }
 .late-live-cue .sticker { width: 60px; }
-.late-evidence-scene > .late-stack > button { justify-self: start; }
 .late-evidence-final { gap: 8px; }
-.late-evidence-final .late-trace-evidence h3:not(:first-child),
-.late-evidence-final .late-trace-evidence button { margin-top: 8px; }
+.late-evidence-final .late-trace-evidence h3:not(:first-child) { margin-top: 8px; }
 
 @media (max-width: 1023px) {
   .late-scorecard, .late-evidence-scene { font-size: inherit; }
-  .late-incident-gate, .late-case-layout, .late-scope, .late-outcomes, .late-evidence-grid,
+  .late-case-layout, .late-draft-layout, .late-scope, .late-outcomes, .late-evidence-grid,
   .late-pilot-roles, .late-pilot-roles:has(> :last-child:nth-child(2)), .late-handoff,
   .late-trace-evidence, .late-live-cue, .late-email-pair, .late-evidence-scene .late-trace-track,
   .late-evidence-scene > .late-stack > ol:not(.late-trace-track) { grid-template-columns: minmax(0, 1fr); }
-  .late-incident-gate > button { justify-self: start; }
   .late-case-layout { gap: 14px; }
   .late-request-art { width: 116px; }
   .late-reviewer-art { width: 60px; }
   .late-evidence-grid > div { grid-template-columns: 66px minmax(0, 1fr); align-items: center; justify-items: start; text-align: start; }
   .late-evidence-grid .sticker { width: 66px; }
   .late-scope .late-calendar { max-width: 320px; grid-row: 2; }
-  .late-draft, .late-trace-start { align-items: flex-start; flex-direction: column; }
-  .late-familiar { min-height: 0; padding: 12px 6px; }
   .late-evidence-scene .late-familiar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .late-evidence-scene .late-familiar-labeled .late-familiar-grid { grid-template-columns: minmax(0, 1fr); }
-  .late-familiar-labeled .late-recalled { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 6px; align-items: start; }
-  .late-familiar-labeled .late-recalled-art { height: auto; }
-  .late-artifact-desktop { display: none; }
-  .late-artifact-mobile { display: block; }
-  .late-artifact-mobile p { padding: 0 8px 8px; }
-  .late-recalled-art { min-height: 82px; }
-  .late-blueprint { min-height: 200px; }
+  .late-familiar > .late-familiar-grid .late-recall-art { height: 68px; }
   .late-trace-reference + .late-trace-reference::before {
     width: 0;
     height: 16px;
@@ -727,6 +752,11 @@ export const lateStyles = `
 }
 
 @media (max-width: 600px) {
+  .late-evidence-scene .late-familiar > .late-familiar-grid { grid-template-columns: minmax(0, 1fr); }
+  .late-familiar > .late-familiar-grid .late-recalled { display: grid; grid-template-columns: minmax(88px, 28%) minmax(0, 1fr); gap: 12px; }
+  .late-familiar > .late-familiar-grid .late-recalled-art { height: 78px; }
+  .late-familiar > .late-familiar-grid .late-recall-art { height: 58px; }
+  .late-artifact-copy { padding-top: 0; }
   .late-table { display: block; }
   .late-table thead {
     position: absolute;

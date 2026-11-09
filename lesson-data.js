@@ -73,8 +73,6 @@ const systemDescriptions = [
   `<strong>Power BI:</strong> Operational reporting.`,
 ];
 const legacyDefinition = `<p>A legacy system is an older system already in use.</p>`;
-const systemFirst = `${systemHeading}${unorderedList(systemDescriptions.slice(0, 3))}${legacyDefinition}`;
-const systemLater = `${systemHeading}${unorderedList(systemDescriptions.slice(3))}`;
 const glossaryHeading = `<h3>Terms used in the integration plan</h3>`;
 const integrationApiText = `<p><strong>Integration:</strong> A connection through which systems exchange information or request permitted actions.</p>
 <p><strong>Application Programming Interface (API):</strong> A defined way for software to request data or actions from another system.</p>`;
@@ -257,9 +255,10 @@ export const lessonPages = [
     takeaway: "S003-C07",
     parts: {
       intro: connectionIntro,
+      systemHeading,
       systemNames,
-      systemFirst,
-      systemLater,
+      systemDescriptions,
+      legacyDefinition,
       integrationApi,
       mcp,
       middleware,

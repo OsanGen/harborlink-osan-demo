@@ -6,39 +6,43 @@
   <meta name="theme-color" content="#ffffff">
   <title>HarborLink · Teaching bridge</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./styles.css">
-  <script type="module" src="./app.js"></script>
+  <link rel="stylesheet" href="./styles.css?v=2">
+  <script type="module" src="./app.js?v=2"></script>
 </head>
 <body>
   <main class="presentation">
-    <header class="page-header">
-      <h1 id="page-title" tabindex="-1"></h1>
-      <p id="page-context" class="page-context"></p>
-      <p id="workflow-context" class="workflow-context" hidden></p>
-    </header>
-
-    <noscript>This presentation needs JavaScript to display the lesson.</noscript>
-    <section class="scene-stage" id="scene-stage" aria-labelledby="page-title"></section>
-    <aside class="takeaway" id="takeaway" aria-label="Takeaway" data-motion="takeaway" hidden></aside>
+    <div class="presentation-content" id="presentation-content" tabindex="0" role="region" aria-labelledby="page-title">
+      <div class="lesson">
+        <header class="page-header">
+          <h1 id="page-title" tabindex="-1"></h1>
+          <p id="page-context" class="page-context"></p>
+          <p id="workflow-context" class="workflow-context" hidden></p>
+        </header>
+        <noscript>This presentation needs JavaScript to display the lesson.</noscript>
+        <section class="scene-stage" id="scene-stage"></section>
+        <aside class="takeaway" id="takeaway" aria-label="Takeaway" data-motion="takeaway" hidden></aside>
+      </div>
+    </div>
 
     <nav class="presenter-toolbar" aria-label="Presentation controls">
-      <span class="page-indicator" id="page-indicator"></span>
-      <div class="transport">
-        <button type="button" id="previous">Previous page</button>
-        <button type="button" class="play-button" id="play">Play</button>
-        <button type="button" id="next">Next page</button>
-      </div>
-      <details id="options" class="presentation-options">
-        <summary>Presentation options</summary>
-        <div class="options-content">
-          <button type="button" data-action="replay">Replay page</button>
-          <button type="button" data-action="reset">Reset demo</button>
-          <button type="button" data-action="final">Show final state</button>
-          <button type="button" data-action="full">Show full page</button>
-          <label class="motion-control"><input type="checkbox" id="reduced-motion"> Reduced motion</label>
-          <button type="button" data-action="notes">Presenter notes</button>
+      <div class="toolbar-inner">
+        <p class="page-indicator" id="page-indicator"></p>
+        <div class="transport">
+          <button type="button" id="previous"><span aria-hidden="true">←</span> Previous</button>
+          <button type="button" id="next">Next <span aria-hidden="true">→</span></button>
         </div>
-      </details>
+        <details id="options" class="presentation-options">
+          <summary>Presentation options</summary>
+          <div class="options-content">
+            <button type="button" data-action="replay">Replay page</button>
+            <button type="button" data-action="reset">Reset demo</button>
+            <button type="button" data-action="final">Show final state</button>
+            <button type="button" data-action="full">Show full page</button>
+            <label class="motion-control"><input type="checkbox" id="reduced-motion"> Reduced motion</label>
+            <button type="button" data-action="notes">Presenter notes</button>
+          </div>
+        </details>
+      </div>
     </nav>
     <p class="visually-hidden" id="announcement" role="status" aria-atomic="true"></p>
   </main>

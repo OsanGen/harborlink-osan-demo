@@ -34,10 +34,14 @@ function workflowRail(ui, state) {
   const active = activeByState[state] ?? [];
   return `<div class="early-rail">
     ${ui.part('workflowHeading')}
-    <ol class="early-steps">${ui.part('workflowSteps').map(({ name }, index) => `<li class="${active.includes(index) ? 'early-step-active' : ''}" data-motion="workflow-step-${index + 1}">${name}</li>`).join('')}</ol>
-    ${state === 'R3' ? `<svg class="early-guides" data-motion="guides" viewBox="0 0 700 42" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-      <path d="M 550 0 V 15 H 8 V 42 M 650 0 V 26 H 16 V 42" />
-    </svg>` : ''}
+    <ol class="early-steps" role="list">
+      ${ui.part('workflowSteps').map(({ name }, index) => `
+        <li class="${active.includes(index) ? 'early-step-active' : ''}">
+          <span class="early-step-number" aria-hidden="true">${index + 1}</span>
+          <span>${name}</span>
+          <span class="early-step-line" data-motion="workflow-step-${index + 1}" aria-hidden="true"></span>
+        </li>`).join('')}
+    </ol>
   </div>`;
 }
 
@@ -72,28 +76,43 @@ function workflowDetail(state, ui) {
 }
 
 function workflow(state, ui) {
-  return `<div class="early-workflow ${state === 'R3' ? 'early-workflow-guided' : ''}">
-    <div class="early-reading early-ticket" data-object="ticket-a">
-      ${ui.asset('A002', 'early-ticket-art')}
+  return `<div class="early-workflow">
+    <article class="early-ticket" data-object="ticket-a">
       <div>${ui.block(2)}</div>
-    </div>
+      ${ui.asset('A002', 'early-ticket-art')}
+    </article>
     ${workflowRail(ui, state)}
     <div class="early-workflow-detail">${workflowDetail(state, ui)}</div>
-    <div class="early-authority" data-object="human-boundary">
+    <aside class="early-authority" data-object="human-boundary">
       ${ui.asset('A004', 'early-authority-art')}
-      <div>${ui.block(6)}${ui.part('workflowThroughout')}</div>
-    </div>
+      <div>
+        ${ui.block(6)}
+        <div class="early-throughout ${state === 'R3' ? 'early-throughout-active' : ''}">
+          ${ui.part('workflowThroughout')}
+          ${state === 'R3' ? '<span class="early-throughout-line" data-motion="guides" aria-hidden="true"></span>' : ''}
+        </div>
+      </div>
+    </aside>
   </div>`;
 }
 
 function systemInventory(state, ui) {
-  const inventoryState = state === 'R0' || state === 'R1' || state === 'R5';
-  return `<ul class="early-systems ${inventoryState ? '' : 'early-systems-quiet'}">
+  const expanded = state === 'R0' || state === 'R1';
+  const showIcons = expanded || state === 'R5';
+  const descriptions = ui.part('systemDescriptions');
+  return `<ul class="early-systems ${showIcons ? '' : 'early-systems-quiet'}" role="list">
     ${ui.part('systemNames').map((name, index) => {
       const active = (state === 'R0' && index < 3) || (state === 'R1' && index >= 3);
-      const icon = systemArt[index] ? ui.asset(systemArt[index], 'early-system-art') : '<span class="early-report-icon" aria-hidden="true"></span>';
-      return `<li class="${active ? 'early-system-active' : ''}" ${active ? 'data-motion="system"' : ''} data-object="system-${index}">
-        ${inventoryState ? icon : ''}<span>${name}</span>
+      let icon = '';
+      if (showIcons) {
+        icon = systemArt[index] ? ui.asset(systemArt[index], 'early-system-art') : '<span class="early-report-icon" aria-hidden="true"></span>';
+      }
+      return `<li class="${active ? 'early-system-active' : ''}" data-object="system-${index}">
+        ${icon}
+        ${active
+          ? `<div class="early-system-copy" data-motion="system-copy">${descriptions[index]}</div>
+            <span class="early-system-line" data-motion="system" aria-hidden="true"></span>`
+          : `<span class="early-system-name">${name}</span>`}
       </li>`;
     }).join('')}
   </ul>`;
@@ -121,8 +140,6 @@ function connectionDiagram(state) {
 
 function systemsDetail(state, ui) {
   switch (state) {
-    case 'R0': return ui.part('intro') + ui.part('systemFirst');
-    case 'R1': return ui.part('systemLater');
     case 'R2': return ui.part('integrationApi');
     case 'R3': return ui.part('mcp');
     case 'R4': return ui.part('middleware');
@@ -135,14 +152,27 @@ function systemsDetail(state, ui) {
 }
 
 function systems(state, ui) {
+  const expanded = state === 'R0' || state === 'R1';
+  const status = `<aside class="early-status" data-object="connections-status">${ui.block(5)}</aside>`;
+  if (expanded) {
+    return `<div class="early-systems-scene">
+      ${state === 'R0' ? `<div class="early-systems-intro">${ui.part('intro')}</div>` : ''}
+      ${status}
+      <section class="early-systems-inventory">
+        ${ui.part('systemHeading')}
+        ${systemInventory(state, ui)}
+        ${state === 'R0' ? `<div class="early-legacy-definition">${ui.part('legacyDefinition')}</div>` : ''}
+      </section>
+    </div>`;
+  }
   return `<div class="early-systems-scene">
+    ${status}
     <div class="early-systems-body">
       <div class="early-systems-visual" data-motion="map">
         ${systemInventory(state, ui)}${connectionDiagram(state)}
       </div>
       <div class="early-reading early-systems-detail" data-motion="system-copy">${systemsDetail(state, ui)}</div>
     </div>
-    <div class="early-status" data-object="connections-status">${ui.block(5)}</div>
   </div>`;
 }
 
@@ -172,24 +202,24 @@ export const earlyScenes = {
     render: workflow,
     beats: [
       { from: 'R0', to: 'R1', duration: 600, motion: [
-        { target: 'workflow-step-1', effect: 'focus', delay: 0, duration: 200 },
-        { target: 'workflow-step-2', effect: 'focus', delay: 110, duration: 200 },
-        { target: 'workflow-step-3', effect: 'focus', delay: 220, duration: 200 },
+        { target: 'workflow-step-1', effect: 'line', delay: 0, duration: 200 },
+        { target: 'workflow-step-2', effect: 'line', delay: 110, duration: 200 },
+        { target: 'workflow-step-3', effect: 'line', delay: 220, duration: 200 },
         { target: 'step-copy', effect: 'fade', delay: 120, duration: 360 },
         { target: 'saved', effect: 'rise', delay: 220, duration: 380 },
       ] },
       { from: 'R1', to: 'R2', duration: 600, motion: [
         { target: 'step-copy', effect: 'fade', delay: 0, duration: 380 },
-        { target: 'workflow-step-4', effect: 'focus', delay: 100, duration: 420 },
-        { target: 'workflow-step-5', effect: 'focus', delay: 180, duration: 420 },
+        { target: 'workflow-step-4', effect: 'line', delay: 100, duration: 420 },
+        { target: 'workflow-step-5', effect: 'line', delay: 180, duration: 420 },
         { target: 'owner', effect: 'slide-right', delay: 120, duration: 420 },
         { target: 'draft', effect: 'rise', delay: 180, duration: 420 },
         { target: 'route', effect: 'line', delay: 200, duration: 400 },
       ] },
       { from: 'R2', to: 'R3', duration: 450, motion: [
         { target: 'step-copy', effect: 'fade', delay: 0, duration: 450 },
-        { target: 'workflow-step-6', effect: 'focus', delay: 0, duration: 450 },
-        { target: 'workflow-step-7', effect: 'focus', delay: 0, duration: 450 },
+        { target: 'workflow-step-6', effect: 'line', delay: 0, duration: 450 },
+        { target: 'workflow-step-7', effect: 'line', delay: 0, duration: 450 },
         { target: 'guides', effect: 'line', delay: 0, duration: 450 },
       ] },
       { from: 'R3', to: 'R4', duration: 220, motion: [
@@ -203,7 +233,7 @@ export const earlyScenes = {
     render: systems,
     beats: [
       { from: 'R0', to: 'R1', duration: 450, motion: [
-        { target: 'system', effect: 'focus', delay: 0, duration: 450 },
+        { target: 'system', effect: 'line', delay: 0, duration: 450 },
         { target: 'system-copy', effect: 'fade', delay: 0, duration: 450 },
       ] },
       { from: 'R1', to: 'R2', duration: 450, motion: [
@@ -293,111 +323,137 @@ export const earlyStyles = `
 .early-spec > :first-child { margin-top: 0; }
 .early-spec > :last-child { margin-bottom: 0; }
 .early-spec p + p { margin-top: .25rem; }
-.early-workflow, .early-systems-scene { display: grid; gap: 1rem; }
+.early-workflow, .early-systems-scene { display: grid; gap: clamp(1rem, 2vw, 1.6rem); }
 .early-workflow {
-  position: relative;
-  grid-template-columns: minmax(0, 40fr) minmax(0, 60fr);
+  grid-template-columns: minmax(0, 46fr) minmax(0, 54fr);
   grid-template-areas: 'rail rail' 'ticket detail' 'authority authority';
   column-gap: clamp(1rem, 2.5vw, 2.5rem);
   align-items: start;
 }
 .early-rail { grid-area: rail; }
 .early-ticket { grid-area: ticket; }
-.early-workflow-detail { grid-area: detail; min-width: 0; }
+.early-workflow-detail { grid-area: detail; min-width: 0; padding-block: clamp(.85rem, 2vw, 1.2rem); }
 .early-authority { grid-area: authority; }
-.early-rail > :first-child { margin-top: 0; }
+.early-rail > h3 { color: var(--muted); font-size: .85em; }
 .early-steps {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: .375rem;
-  margin: .5rem 0 0;
+  gap: clamp(.4rem, 1.2vw, 1rem);
+  margin: .35rem 0 0;
   padding: 0;
   list-style: none;
-  counter-reset: early-step;
 }
 .early-steps li {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: .3rem;
+  align-items: baseline;
+  gap: .38rem;
   min-width: 0;
   margin: 0;
-  padding: .35rem .4rem;
-  border: 1px solid #a4b3b6;
-  border-radius: .35rem;
+  padding: .35rem 0 .55rem;
+  border-block-end: 1px solid var(--divider);
+  color: var(--muted);
+  font-size: .82em;
   font-weight: 600;
-  overflow-wrap: anywhere;
-  counter-increment: early-step;
 }
-.early-steps li::before { content: counter(early-step) '.'; color: #525d6b; font-weight: 400; }
-.early-steps li.early-step-active { background: #d4f3e5; border-color: #20242b; }
-.early-guides { display: block; width: 100%; height: 1.3rem; overflow: visible; }
-.early-guides path { fill: none; stroke: #525d6b; stroke-width: 2; vector-effect: non-scaling-stroke; }
-.early-workflow-guided .early-ticket { padding-inline-start: 8%; }
-.early-workflow-guided::before,
-.early-workflow-guided::after {
+.early-step-number { color: var(--focus); font-size: .8em; font-variant-numeric: tabular-nums; }
+.early-step-line, .early-system-line {
   position: absolute;
-  grid-area: 2 / 1 / 3 / -1;
-  inset-block: -1rem;
-  inset-inline-start: calc(8% / 7);
-  content: '';
-  border-inline-start: 2px solid #525d6b;
+  inset-inline: 0;
+  inset-block-end: -1px;
+  height: 3px;
+  pointer-events: none;
 }
-.early-workflow-guided::after { inset-inline-start: calc(16% / 7); }
+.early-steps li.early-step-active { color: var(--ink); }
+.early-step-active .early-step-line, .early-system-line { background: var(--focus); }
+.early-ticket {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(2.5rem, 6vw, 3.75rem);
+  gap: .7rem;
+  align-items: start;
+  padding: clamp(.85rem, 2vw, 1.2rem);
+  border-inline-start: 4px solid var(--focus);
+  border-radius: .35rem;
+  background: var(--quiet);
+}
+.early-ticket blockquote { margin: .55rem 0 0; padding: 0; border: 0; }
+.early-ticket-art { inline-size: 100%; }
+.early-workflow-detail ol { padding-inline-start: 1.35em; }
+.early-workflow-detail ol li + li { margin-top: .35rem; }
 .early-reading > [data-motion="step-copy"] + .early-record { margin-top: .7rem; }
-.early-ticket, .early-draft, .early-authority { display: flex; align-items: flex-start; gap: .75rem; }
-.early-ticket-art, .early-routing-art { flex: 0 0 clamp(3rem, 6vw, 5.5rem); max-width: 24%; }
-.early-ticket > div, .early-routing > div { min-width: 0; }
+.early-draft, .early-authority { display: flex; align-items: flex-start; gap: .75rem; }
+.early-routing-art { flex: 0 0 2rem; max-width: 24%; }
+.early-routing > div { min-width: 0; }
 .early-ticket h3, .early-routing h3 { margin-top: 0; }
-.early-record { padding: .55rem .8rem; background: #f6f8fa; border-inline-start: 3px solid #235c7a; }
+.early-record { padding: .55rem .8rem; background: var(--quiet); border-inline-start: 3px solid var(--focus); }
 .early-routing { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .7rem; }
 .early-routing h3 { grid-column: 1 / -1; }
 .early-route-proposal { display: flex; align-items: center; }
-.early-route-line { flex: 0 0 clamp(.5rem, 2.5vw, 2rem); border-block-end: 3px dashed #525d6b; }
-.early-owner, .early-draft { border: 1px solid #a4b3b6; border-radius: .35rem; background: #fff; padding: .4rem .55rem; }
+.early-route-line { flex: 0 0 clamp(.5rem, 2vw, 1.4rem); border-block-end: 2px dashed var(--muted); }
+.early-owner, .early-draft { padding: .35rem .5rem; }
 .early-draft { align-items: center; }
 .early-authority, .early-status {
-  padding: .55rem .85rem;
-  border: 2px solid #20242b;
+  padding: .7rem .9rem;
+  border-inline-start: 4px solid var(--focus);
   border-radius: .35rem;
-  background: #fff;
 }
+.early-authority { background: var(--blue); }
 .early-authority-art { flex: 0 0 2.5rem; max-width: 2.5rem; }
 .early-authority h3, .early-status h3 { margin-bottom: .25rem; }
-.early-authority p, .early-status p { margin-block: .25rem; }
+.early-authority p, .early-status p { margin-block: .2rem; }
+.early-throughout { display: inline-block; position: relative; }
+.early-throughout-active { font-weight: 650; }
+.early-throughout-line {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -.1rem;
+  height: 2px;
+  background: var(--focus);
+}
+.early-systems-intro { max-width: 62ch; }
+.early-systems-inventory > h3 { margin-bottom: .65rem; }
 .early-systems-body { grid-template-columns: minmax(0, 56fr) minmax(0, 44fr); }
+.early-systems-detail { display: grid; align-content: start; gap: .6rem; }
+.early-systems-detail > p { margin: 0; }
 .early-systems {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(3, auto);
-  grid-auto-flow: column;
-  gap: .45rem;
+  gap: .55rem .75rem;
   list-style: none;
   padding: 0;
   margin: 0;
 }
+.early-systems-inventory .early-systems { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .early-systems li {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: .6rem;
-  padding: .35rem .5rem;
+  align-items: flex-start;
+  gap: .65rem;
+  padding: .55rem .65rem;
   margin: 0;
   min-width: 0;
-  border: 1px solid #a4b3b6;
-  border-radius: .4rem;
-  line-height: 1.2;
+  border-block-end: 1px solid var(--divider);
+  line-height: 1.25;
 }
-.early-systems .early-system-active { border-color: #20242b; background: #dceffd; }
-.early-system-art { flex: 0 0 3.25rem; inline-size: 3.25rem; block-size: 3.25rem; }
+.early-systems .early-system-active { background: var(--blue); }
+.early-system-name { align-self: center; font-weight: 650; }
+.early-system-copy { min-width: 0; }
+.early-system-copy strong { display: block; margin-bottom: .2rem; }
+.early-legacy-definition {
+  margin-top: .7rem;
+  color: var(--muted);
+}
+.early-system-art { flex: 0 0 2.65rem; inline-size: 2.65rem; block-size: 2.65rem; }
 .early-report-icon {
-  flex: 0 0 2.6rem;
-  block-size: 2rem;
-  margin-inline: .325rem;
+  flex: 0 0 2.1rem;
+  block-size: 1.6rem;
+  margin: .5rem .275rem;
   border: 2px solid #20242b;
   border-block-start: .4rem solid #20242b;
   border-radius: .2rem;
   background: #fff;
 }
-.early-systems-quiet li { border-style: dotted; }
+.early-systems-quiet li { color: var(--muted); }
 .early-connection {
   display: flex;
   align-items: center;
@@ -423,11 +479,12 @@ export const earlyStyles = `
 .early-mcp-layer::before { position: absolute; inset: 0; border: 3px solid #20242b; border-radius: .35rem; content: ''; }
 .early-api { border: 3px solid #20242b; border-radius: .25rem; padding: .4rem .75rem; background: #dceffd; }
 .early-middleware .early-api { background: #d4f3e5; padding-inline: .4rem; }
-.early-status { background: #f6f8fa; }
+.early-status { background: var(--yellow); }
 .early-questions > :first-child { margin-top: 0; }
 @media (max-width: 1023px) {
   .early-plan, .early-workflow, .early-systems-body { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
   .early-workflow { grid-template-areas: 'ticket' 'rail' 'detail' 'authority'; }
+  .early-workflow-detail { padding-block: .25rem; }
   .early-routing { grid-template-columns: minmax(0, 1fr); }
   .early-board { aspect-ratio: auto; padding: .5rem; }
   .early-cover { inset: 0; }
@@ -438,12 +495,12 @@ export const earlyStyles = `
   .early-plan-sticker { block-size: 3.75rem; }
   .early-plan-object figcaption { font-size: 20px; }
   .early-spec { justify-self: start; text-align: start; }
-  .early-steps, .early-systems { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-auto-flow: row; }
-  .early-guides { display: none; }
-  .early-workflow-guided .early-ticket { padding-inline-start: 0; }
-  .early-workflow-guided::before,
-  .early-workflow-guided::after { display: none; }
-  .early-system-art { flex-basis: 2.5rem; inline-size: 2.5rem; block-size: 2.5rem; }
-  .early-report-icon { flex-basis: 2rem; margin-inline: .25rem; }
+}
+@media (max-width: 760px) {
+  .early-steps { display: flex; flex-wrap: wrap; gap: .25rem .85rem; }
+  .early-systems-inventory .early-systems { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .early-systems, .early-systems-inventory .early-systems { grid-template-columns: minmax(0, 1fr); }
 }
 `;
