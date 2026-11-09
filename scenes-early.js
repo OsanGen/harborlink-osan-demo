@@ -9,22 +9,26 @@ function planningBoard(state, ui) {
     ['plan', 'A005'],
     ['reviewer', 'A004'],
   ];
-  const questions = ui.part('questions');
-
   return `<div class="early-plan">
-    <div class="early-reading" data-motion="case">
+    <div class="early-reading early-plan-reading" data-motion="case">
       ${state === 'R1' ? ui.block(2) + ui.block(3) : ui.part('intro')}
     </div>
-    <div class="early-board ${covered ? 'early-board-covered' : ''}">
-      <div class="early-board-art" data-object="planning-board">${ui.asset('A001')}</div>
-      ${covered || lifting ? '<div class="early-cover" data-motion="cover" aria-hidden="true"></div>' : ''}
-      <div class="early-plan-objects">
-        ${objects.map(([name, art], index) => `<figure class="early-plan-object" data-motion="${name}" data-object="plan-${name}">
-          ${covered ? '' : ui.asset(art, 'early-plan-sticker')}
-          <figcaption>${questions[index]}</figcaption>
-        </figure>`).join('')}
+    ${showingSpec ? `<section class="early-spec" data-motion="spec">${ui.block(4)}</section>` : ''}
+    <div class="early-board">
+      <div class="early-board-plate" aria-hidden="true">
+        <div class="early-board-art">${ui.asset('A001')}</div>
+        <div class="early-board-window">
+          ${covered ? '' : `<div class="early-plan-objects">
+            ${objects.map(([name, art]) => `<div class="early-plan-object" data-motion="${name}">
+              ${ui.asset(art, 'early-plan-sticker')}
+            </div>`).join('')}
+          </div>`}
+          ${covered || lifting ? '<div class="early-cover" data-motion="cover"></div>' : ''}
+        </div>
       </div>
-      ${showingSpec ? `<div class="early-spec" data-motion="spec">${ui.block(4)}</div>` : ''}
+      <ol class="early-plan-questions" role="list">
+        ${ui.part('questions').map(question => `<li>${question}</li>`).join('')}
+      </ol>
     </div>
   </div>`;
 }
@@ -165,13 +169,15 @@ function systems(state, ui) {
       </section>
     </div>`;
   }
+  const diagram = connectionDiagram(state);
   return `<div class="early-systems-scene">
     ${status}
-    <div class="early-systems-body">
+    <div class="early-systems-body${diagram ? ' early-systems-with-diagram' : ''}">
       <div class="early-systems-visual" data-motion="map">
-        ${systemInventory(state, ui)}${connectionDiagram(state)}
+        ${systemInventory(state, ui)}
       </div>
       <div class="early-reading early-systems-detail" data-motion="system-copy">${systemsDetail(state, ui)}</div>
+      ${diagram}
     </div>
   </div>`;
 }
@@ -242,8 +248,8 @@ export const earlyScenes = {
         { target: 'connection-line', effect: 'line', delay: 0, duration: 450 },
       ] },
       { from: 'R2', to: 'R3', duration: 600, motion: [
-        { target: 'mcp-layer', effect: 'fade', delay: 0, duration: 600 },
-        { target: 'interface', effect: 'move', delay: 0, duration: 600 },
+        { target: 'interface', effect: 'fade', delay: 0, duration: 300 },
+        { target: 'mcp-layer', effect: 'fade', delay: 120, duration: 480 },
         { target: 'system-copy', effect: 'fade', delay: 0, duration: 600 },
       ] },
       { from: 'R3', to: 'R4', duration: 450, motion: [
@@ -263,66 +269,96 @@ export const earlyScenes = {
 };
 
 export const earlyStyles = `
-.early-plan,
 .early-systems-body {
   display: grid;
   grid-template-columns: minmax(0, 42fr) minmax(0, 58fr);
   align-items: start;
   gap: clamp(1rem, 2.5vw, 2.5rem);
 }
+.early-plan {
+  display: grid;
+  grid-template-columns: minmax(0, 42fr) minmax(0, 58fr);
+  grid-template-areas: "intro board" "spec board";
+  grid-template-rows: auto 1fr;
+  gap: clamp(1rem, 2.5vw, 2.5rem);
+  align-items: start;
+}
+.early-plan-reading { grid-area: intro; }
+.early-plan-reading > p + h3 { margin-top: 1em; }
 .early-reading { min-width: 0; }
 .early-reading > :first-child, .early-record > :first-child,
 .early-authority h3, .early-status h3 { margin-top: 0; }
 .early-reading > :last-child, .early-record > :last-child,
 .early-authority p:last-child, .early-status p:last-child { margin-bottom: 0; }
 .early-board {
+  --board-interior: 10.2% 12.9% 14.3% 7.3%;
+  grid-area: board;
+  width: min(100%, clamp(440px, 140dvh - 550px, 590px));
+  margin-inline: auto;
+}
+.early-board-plate {
   position: relative;
   isolation: isolate;
-  display: grid;
-  align-content: center;
-  min-width: 0;
-  aspect-ratio: 1.5;
-  padding: 6% 20% 7% 16%;
+  aspect-ratio: 747 / 513;
 }
-.early-board-art, .early-cover { position: absolute; inset: 0; pointer-events: none; }
-.early-board-art { z-index: -2; }
-.early-board-art .sticker { inline-size: 100%; block-size: 100%; }
+.early-board-art, .early-board-window, .early-cover { position: absolute; inset: 0; }
+.early-board-art, .early-board-window { overflow: clip; }
+.early-board-art .sticker {
+  position: absolute;
+  width: 117.94%;
+  max-width: none;
+  top: -13.06%;
+  left: -8.97%;
+}
+.early-board-window { inset: var(--board-interior); border-radius: 6px; }
 .early-cover {
-  z-index: 1;
-  inset: 17.8% 20.5% 21.6% 16.5%;
-  border: 3px solid #20242b;
-  border-radius: .75rem;
-  background: #dceffd;
+  background: var(--blue);
   background-image: repeating-linear-gradient(0deg, transparent 0 23px, #235c7a29 23px 24px),
     repeating-linear-gradient(90deg, transparent 0 23px, #235c7a29 23px 24px);
 }
-.early-board-covered .early-cover { z-index: -1; }
 .early-plan-objects {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: start;
-  gap: .75rem;
-  padding: .25rem 0;
+  height: 100%;
+  gap: clamp(8px, 1vw, 14px);
+  padding: clamp(8px, 1.6vw, 20px);
 }
 .early-plan-object {
   display: grid;
-  justify-items: center;
-  gap: .2rem;
-  margin: 0;
-  text-align: center;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  background: var(--quiet);
   border-radius: .5rem;
 }
-.early-plan-sticker { inline-size: 100%; max-inline-size: 8rem; block-size: clamp(5rem, 10vw, 8rem); }
-.early-plan-object figcaption, .early-spec {
-  padding: .35rem .55rem;
-  background: #fff;
-  border-radius: .35rem;
+.early-plan-sticker { width: min(84%, 8rem); height: min(78%, 8rem); }
+.early-plan-questions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(8px, 1vw, 14px);
+  list-style: none;
+  padding: 0 12.9% 0 7.3%;
+  margin-block: 14px 0;
 }
-.early-plan-object figcaption { font-size: 22px; line-height: 1.25; }
-.early-spec { justify-self: center; max-width: 32rem; margin: .25rem auto 0; text-align: center; }
-.early-spec > :first-child { margin-top: 0; }
-.early-spec > :last-child { margin-bottom: 0; }
-.early-spec p + p { margin-top: .25rem; }
+.early-plan-questions li {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 2px solid var(--divider);
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 600;
+  text-align: center;
+}
+.early-spec {
+  grid-area: spec;
+  padding: clamp(12px, 1.6vw, 20px);
+  border-inline-start: 4px solid var(--focus);
+  border-radius: 6px;
+  background: var(--mint);
+}
+.early-spec p:first-of-type { font-weight: 650; }
+.early-spec p + p { margin-top: .35em; }
 .early-workflow, .early-systems-scene { display: grid; gap: clamp(1rem, 2vw, 1.6rem); }
 .early-workflow {
   grid-template-columns: minmax(0, 46fr) minmax(0, 54fr);
@@ -413,6 +449,13 @@ export const earlyStyles = `
 .early-systems-intro { max-width: 62ch; }
 .early-systems-inventory > h3 { margin-bottom: .65rem; }
 .early-systems-body { grid-template-columns: minmax(0, 56fr) minmax(0, 44fr); }
+.early-systems-with-diagram {
+  grid-template-areas: "map detail" "diagram detail";
+  row-gap: .8rem;
+}
+.early-systems-with-diagram .early-systems-visual { grid-area: map; }
+.early-systems-with-diagram .early-systems-detail { grid-area: detail; }
+.early-systems-with-diagram .early-connection { grid-area: diagram; }
 .early-systems-detail { display: grid; align-content: start; gap: .6rem; }
 .early-systems-detail > p { margin: 0; }
 .early-systems {
@@ -459,7 +502,6 @@ export const earlyStyles = `
   align-items: center;
   justify-content: center;
   gap: .4rem;
-  margin-top: .8rem;
   padding: .6rem;
   min-width: 0;
   border-radius: .4rem;
@@ -483,24 +525,21 @@ export const earlyStyles = `
 .early-questions > :first-child { margin-top: 0; }
 @media (max-width: 1023px) {
   .early-plan, .early-workflow, .early-systems-body { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
+  .early-plan { grid-template-areas: "intro" "board"; grid-template-rows: auto; }
+  .early-plan:has(.early-spec) { grid-template-areas: "intro" "spec" "board"; }
+  .early-systems-with-diagram { grid-template-areas: "detail" "diagram" "map"; }
   .early-workflow { grid-template-areas: 'ticket' 'rail' 'detail' 'authority'; }
   .early-workflow-detail { padding-block: .25rem; }
   .early-routing { grid-template-columns: minmax(0, 1fr); }
-  .early-board { aspect-ratio: auto; padding: .5rem; }
-  .early-cover { inset: 0; }
-  .early-board-art { display: none; }
-  .early-plan-objects { grid-template-columns: minmax(0, 1fr); }
-  .early-plan-object { grid-template-columns: minmax(2.75rem, 4rem) minmax(0, 1fr); align-items: center; justify-items: start; text-align: start; }
-  .early-board-covered .early-plan-object { grid-template-columns: minmax(0, 1fr); }
-  .early-plan-sticker { block-size: 3.75rem; }
-  .early-plan-object figcaption { font-size: 20px; }
-  .early-spec { justify-self: start; text-align: start; }
 }
 @media (max-width: 760px) {
   .early-steps { display: flex; flex-wrap: wrap; gap: .25rem .85rem; }
   .early-systems-inventory .early-systems { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
+  .early-plan-questions { padding-inline: 0; }
+  .early-plan-questions li { font-size: clamp(16px, 4.5vw, 20px); }
   .early-systems, .early-systems-inventory .early-systems { grid-template-columns: minmax(0, 1fr); }
+  .early-systems-with-diagram .early-systems-quiet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 `;

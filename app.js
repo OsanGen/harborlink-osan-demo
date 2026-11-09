@@ -1,6 +1,6 @@
 import { lessonPages } from './lesson-data.js?v=2';
-import { earlyScenes, earlyStyles } from './scenes-early.js?v=2';
-import { lateScenes, lateStyles } from './scenes-late.js?v=2';
+import { earlyScenes, earlyStyles } from './scenes-early.js?v=3';
+import { lateScenes, lateStyles } from './scenes-late.js?v=3';
 
 const scenes = { ...earlyScenes, ...lateScenes };
 const pageStates = lessonPages.map(({ id }) => ['R0', ...scenes[id].beats.map(beat => beat.to)]);
@@ -128,12 +128,7 @@ function commit(stepIndex, pageIndex = presentation.pageIndex) {
   if (focused === next && next.disabled) previous.focus({ preventScroll: true });
 }
 
-function matchingPositions() {
-  return new Map(Array.from(stage.querySelectorAll('[data-object]'), node =>
-    [node.dataset.object, node.getBoundingClientRect()]));
-}
-
-function motionFrames(node, effect, positions) {
+function motionFrames(effect) {
   switch (effect) {
     case 'lift':
       return [{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-32%)', opacity: 0 }];
@@ -143,20 +138,8 @@ function motionFrames(node, effect, positions) {
       return [{ boxShadow: '0 0 0 0 transparent' }, { boxShadow: '0 0 0 3px #235c7a' }];
     case 'line':
       return [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }];
-    case 'slide-left':
-      return [{ transform: 'translateX(24px)', opacity: 0 }, { transform: 'none', opacity: 1 }];
     case 'slide-right':
       return [{ transform: 'translateX(-24px)', opacity: 0 }, { transform: 'none', opacity: 1 }];
-    case 'exit-left':
-      return [{ translate: 'none', opacity: 1 }, { translate: '-24px 0', opacity: 0 }];
-    case 'move': {
-      const old = positions.get(node.dataset.object);
-      if (old) {
-        const now = node.getBoundingClientRect();
-        return [{ translate: `${old.left - now.left}px ${old.top - now.top}px` }, { translate: 'none' }];
-      }
-      return [{ translate: '0 12px', opacity: 0 }, { translate: 'none', opacity: 1 }];
-    }
     case 'rise':
       return [{ translate: '0 12px', opacity: 0 }, { translate: 'none', opacity: 1 }];
     default:
@@ -171,7 +154,6 @@ function startBeat(beat) {
     return;
   }
 
-  const positions = matchingPositions();
   renderScene(beat.to, beat);
   renderTakeaway(beat.to, true);
   const targets = Array.from(stage.querySelectorAll('[data-motion]'));
@@ -179,7 +161,7 @@ function startBeat(beat) {
   const animations = beat.motion.flatMap(({ target, effect, delay = 0, duration }) =>
     targets
       .filter(node => node.dataset.motion.split(/\s+/).includes(target))
-      .map(node => node.animate(motionFrames(node, effect, positions), {
+      .map(node => node.animate(motionFrames(effect), {
         delay,
         duration,
         fill: 'both',

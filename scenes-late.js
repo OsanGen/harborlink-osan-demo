@@ -153,12 +153,14 @@ function pilotScene(state, ui) {
         <div>${ui.block(2)}${ui.block(3)}</div>
       </div>`;
     case 'R1':
-      return `<div class="late-stack late-pilot-measurement">
+      return `<div class="late-pilot-measurement">
         ${ui.entering?.from === 'R0'
           ? `<div class="late-calendar-exit" data-motion="calendar-exit">${calendarIllustration()}</div>`
           : ''}
-        <div data-motion="kpi">${ui.block(4)}</div>
-        ${pilotScorecard(ui, false)}
+        <div class="late-stack" data-motion="kpi">
+          <div>${ui.block(4)}</div>
+          ${pilotScorecard(ui, false)}
+        </div>
       </div>`;
     case 'R2':
       return `<div class="late-stack">
@@ -254,7 +256,7 @@ function traceView(state, ui) {
   const references = traceDestinations.map((destination) => {
     const selected = destination === current;
     const outline = selected
-      ? '<span class="late-trace-outline" data-object="trace-outline" data-motion="trace-outline" aria-hidden="true"></span>'
+      ? '<span class="late-trace-outline" data-motion="trace-outline" aria-hidden="true"></span>'
       : '';
     const site = destination.state === 'R4D' ? ' late-trace-site' : '';
     return `<li class="late-trace-reference${site}"${selected ? ' aria-current="step"' : ''}>
@@ -326,8 +328,8 @@ export const lateScenes = {
         { target: 'incident', effect: 'fade', delay: 0, duration: 450 },
       ] },
       { from: 'R1', to: 'R2', duration: 550, motion: [
-        { target: 'first-policy', effect: 'slide-right', delay: 0, duration: 550 },
-        { target: 'second-policy', effect: 'slide-left', delay: 0, duration: 550 },
+        { target: 'first-policy', effect: 'fade', delay: 0, duration: 550 },
+        { target: 'second-policy', effect: 'fade', delay: 0, duration: 550 },
         { target: 'billing-evidence', effect: 'fade', delay: 0, duration: 550 },
         { target: 'evidence-note', effect: 'fade', delay: 200, duration: 350 },
       ] },
@@ -355,11 +357,11 @@ export const lateScenes = {
     render: pilotScene,
     beats: [
       { from: 'R0', to: 'R1', duration: 600, motion: [
-        { target: 'calendar-exit', effect: 'exit-left', delay: 0, duration: 300 },
-        { target: 'kpi', effect: 'fade', delay: 0, duration: 360 },
-        { target: 'measure-1', effect: 'fade', delay: 0, duration: 360 },
-        { target: 'measure-2', effect: 'fade', delay: 120, duration: 360 },
-        { target: 'measure-3', effect: 'fade', delay: 240, duration: 360 },
+        { target: 'calendar-exit', effect: 'fade-out', delay: 0, duration: 180 },
+        { target: 'kpi', effect: 'fade', delay: 180, duration: 180 },
+        { target: 'measure-1', effect: 'fade', delay: 180, duration: 300 },
+        { target: 'measure-2', effect: 'fade', delay: 240, duration: 300 },
+        { target: 'measure-3', effect: 'fade', delay: 300, duration: 300 },
       ] },
       { from: 'R1', to: 'R2', duration: 450, motion: [
         { target: 'measure-1', effect: 'focus', delay: 0, duration: 230 },
@@ -391,8 +393,8 @@ export const lateScenes = {
         { target: 'connected-heading', effect: 'fade', delay: 950, duration: 250 },
       ] },
       { from: 'R1', to: 'R2', duration: 650, motion: [
-        { target: 'email-draft', effect: 'slide-left', delay: 0, duration: 500 },
-        { target: 'email-revision', effect: 'slide-right', delay: 0, duration: 500 },
+        { target: 'email-draft', effect: 'rise', delay: 0, duration: 500 },
+        { target: 'email-revision', effect: 'rise', delay: 0, duration: 500 },
         { target: 'recommendation', effect: 'fade', delay: 300, duration: 350 },
       ] },
       { from: 'R2', to: 'R3', duration: 800, motion: [
@@ -402,12 +404,12 @@ export const lateScenes = {
         { target: 'site-link', effect: 'line', delay: 450, duration: 350 },
       ] },
       { from: 'R3', to: 'R4A', duration: 400, motion: [
-        { target: 'trace-outline', effect: 'move', delay: 0, duration: 400 },
+        { target: 'trace-outline', effect: 'fade', delay: 0, duration: 400 },
         { target: 'trace-detail', effect: 'fade', delay: 125, duration: 275 },
       ] },
       ...[['R4A', 'R4B'], ['R4B', 'R4C'], ['R4C', 'R4D']].map(([from, to]) => ({
         from, to, duration: 400, motion: [
-          { target: 'trace-outline', effect: 'move', delay: 0, duration: 400 },
+          { target: 'trace-outline', effect: 'fade', delay: 0, duration: 400 },
           { target: 'trace-detail', effect: 'fade', delay: 125, duration: 275 },
         ],
       })),
